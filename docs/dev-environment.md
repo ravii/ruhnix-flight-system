@@ -47,9 +47,11 @@ scripts/build_all.sh                        # 构建并测试所有模块
 - **Docker**：要先在 Windows 上把 **Docker Desktop 本身**打开（只有 `com.docker.service` 在跑是不够的），WSL 里才会出现 `docker` 命令。见下文 [Docker](#dockerci--干净环境)。
 - **VS Code**：本地的 `.vscode/settings.json` 不进版本库。在里面把 `clang-format.executable` 设成 `/opt/venv/bin/clang-format`，保存时格式化就会和 CI 用同一个版本。
 
-### 在 Windows 上编辑，在 WSL 里构建和调试（同一份代码）
+### 备选：在 Windows 上编辑，在 WSL 里构建（同一份代码）
 
-如果代码 clone 在 Windows 盘上（比如 `D:\Dev\...`），并且希望继续在 Windows 版 VS Code 里编辑、跳转代码，那么不需要在 WSL 里再 clone 一份。WSL 可以通过 `/mnt/d/...` 直接构建这份代码：
+> 日常开发用上面那份 WSL 里的 `~/uav-flight`。这一节只适合临时情况：手头只有 Windows 盘上的 checkout（比如 `D:\Dev\...`），又要构建或调试它。
+
+这时不需要在 WSL 里再 clone 一份，WSL 可以通过 `/mnt/d/...` 直接构建这份代码：
 
 ```bash
 # Windows 的 Git Bash 里，在仓库根目录执行
