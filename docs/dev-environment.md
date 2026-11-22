@@ -11,6 +11,7 @@
 | 机载计算机（ARM64 Linux） | aarch64-linux-gnu-g++、qemu-user |
 | 调试与烧录 | gdb-multiarch、OpenOCD |
 | 格式化 | clang-format 20.1.8（安装在 `/opt/venv`，版本和 `scripts/format.sh` 一致） |
+| GitHub | gh |
 
 ## WSL2（日常开发）
 
@@ -27,9 +28,24 @@ git clone https://github.com/ravii/uav-flight.git ~/uav-flight
 cd ~/uav-flight
 sudo bash docker/setup_ubuntu.sh            # 安装工具链
 git config core.hooksPath scripts/git-hooks # 提交前检查格式
-exec bash -l                                # 重新加载 PATH（/opt/venv/bin）
+exec $SHELL                                 # 重新加载 PATH（/opt/venv/bin）和 QEMU_LD_PREFIX
 scripts/build_all.sh                        # 构建并测试所有模块
 ```
+
+`setup_ubuntu.sh` 把环境变量写在 `/etc/profile.d/uav-flight.sh`，并且让 `/etc/zsh/zshenv` 和 `/etc/bash.bashrc` 都去加载它，所以 zsh、bash 和 VS Code 终端都能拿到。即使没拿到，`scripts/format.sh` 也会自己去 `/opt/venv/bin` 下找 clang-format。
+
+### 从 Windows 迁移过来时
+
+- **git 身份和凭据**：WSL 里的 `~/.gitconfig` 是新的。身份照抄 Windows 上的配置；凭据复用 Windows 的 Git Credential Manager，这样不用重新登录 GitHub：
+
+  ```bash
+  git config --global user.name  "<name>"
+  git config --global user.email "<email>"
+  git config --global credential.helper "/mnt/c/Program\ Files/Git/mingw64/bin/git-credential-manager.exe"
+  ```
+
+- **Docker**：要先在 Windows 上把 **Docker Desktop 本身**打开（只有 `com.docker.service` 在跑是不够的），WSL 里才会出现 `docker` 命令。见下文 [Docker](#dockerci--干净环境)。
+- **VS Code**：本地的 `.vscode/settings.json` 不进版本库。在里面把 `clang-format.executable` 设成 `/opt/venv/bin/clang-format`，保存时格式化就会和 CI 用同一个版本。
 
 ### 在 Windows 上编辑，在 WSL 里构建和调试（同一份代码）
 

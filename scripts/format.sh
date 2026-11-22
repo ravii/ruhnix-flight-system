@@ -6,8 +6,8 @@
 #   scripts/format.sh FILE...         format only the given files
 #   scripts/format.sh --check FILE... check only the given files
 #
-# clang-format is looked up in $CLANG_FORMAT, then PATH, then the copy bundled
-# with Visual Studio. Use the version pinned in CLANG_FORMAT_VERSION below so
+# clang-format is looked up in $CLANG_FORMAT, then PATH, then /opt/venv/bin
+# (docker/setup_ubuntu.sh), then the copy bundled with Visual Studio. Use the version pinned in CLANG_FORMAT_VERSION below so
 # that everyone produces identical output.
 
 set -euo pipefail
@@ -24,6 +24,12 @@ find_clang_format() {
     fi
     if command -v clang-format >/dev/null 2>&1; then
         command -v clang-format
+        return
+    fi
+    # Installed by docker/setup_ubuntu.sh; not on PATH in shells that skip
+    # /etc/profile.d (zsh, non-login bash, editor and hook subprocesses).
+    if [[ -x /opt/venv/bin/clang-format ]]; then
+        echo /opt/venv/bin/clang-format
         return
     fi
     local vs

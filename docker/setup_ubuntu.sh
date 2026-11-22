@@ -31,7 +31,7 @@ packages=(
     # debugging and flashing
     gdb-multiarch openocd
     # tooling
-    ca-certificates curl git less python3 python3-venv sudo
+    ca-certificates curl gh git less python3 python3-venv sudo
 )
 
 apt-get update
@@ -47,11 +47,21 @@ fi
 "$VENV/bin/pip" install --no-cache-dir --upgrade "markdown==${MARKDOWN_VERSION}"
 
 # Environment for login shells (WSL / native). The Docker image sets the same via ENV.
-cat > /etc/profile.d/uav-flight.sh <<EOF
+ENV_FILE=/etc/profile.d/uav-flight.sh
+cat > "$ENV_FILE" <<EOF
 # Added by uav-flight docker/setup_ubuntu.sh
 case ":\$PATH:" in *":$VENV/bin:"*) ;; *) export PATH="$VENV/bin:\$PATH" ;; esac
 export QEMU_LD_PREFIX=/usr/aarch64-linux-gnu
 EOF
+
+# /etc/profile.d is only read by login bash. Also load it from every zsh
+# (zshenv) and from interactive non-login bash (VS Code terminals).
+hook_line="[ -r $ENV_FILE ] && . $ENV_FILE  # uav-flight"
+for rc in /etc/zsh/zshenv /etc/bash.bashrc; do
+    if [[ -f "$rc" ]] && ! grep -qF "$hook_line" "$rc"; then
+        printf '\n%s\n' "$hook_line" >> "$rc"
+    fi
+done
 
 echo "uav-flight toolchain installed:"
 gcc --version | head -1
