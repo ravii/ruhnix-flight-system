@@ -6,34 +6,35 @@
 #include "task.h"
 
 #include "esc_config.hpp"
-#include "fc/bsp/board.hpp"
-#include "fc/bsp/esc_bus.hpp"
-#include "fc/esc/esc_output.hpp"
+#include "rfs/fc/bsp/board.hpp"
+#include "rfs/fc/bsp/esc_bus.hpp"
+#include "rfs/fc/esc/esc_output.hpp"
 
 namespace
 {
 
 /**
  * Motor signal outputs. Only generates waveforms: what to send is decided by
- * fc::esc::EscOutput from config/esc_config.hpp.
+ * rfs::fc::EscOutput from config/esc_config.hpp.
  */
-class TemplateEscBus final : public fc::EscBus
+class TemplateEscBus final : public rfs::fc::EscBus
 {
 public:
-    bool configure(fc::esc::Protocol protocol, bool bidirectional, uint8_t channel_count) override
+    bool configure(
+        rfs::fc::EscProtocol protocol, bool bidirectional, uint8_t channel_count) override
     {
         // TODO: one timer channel per output, in output-channel order.
-        //   DShot:  bit period from esc::dshot_bitrate(protocol); a DMA stream
+        //   DShot:  bit period from dshot_bitrate(protocol); a DMA stream
         //           writes one compare value per bit (0 -> ~37 %, 1 -> ~75 % duty).
         //   analog: PWM at 400 Hz (kPwm) or ~2 kHz (kOneShot125), pulse widths
-        //           from esc::analog_pulse_range(protocol).
+        //           from analog_pulse_range(protocol).
         //   Return false for anything the hardware cannot do (e.g. bidirectional).
         (void)protocol;
         (void)channel_count;
         return !bidirectional;
     }
 
-    void send(const fc::esc::EscFrame& frame) override
+    void send(const rfs::fc::EscFrame& frame) override
     {
         // TODO: DShot: expand each 16-bit frame (MSB first) into the DMA buffer
         // and start the burst. Analog: load frame.values[i] (ns) into CCR i.
@@ -41,7 +42,7 @@ public:
     }
 };
 
-class TemplateBoard final : public fc::Board
+class TemplateBoard final : public rfs::fc::Board
 {
 public:
     void init() override
@@ -50,7 +51,7 @@ public:
         // Configure the IMU data-ready EXTI to call on_imu_ready().
 
         // Keep side effects out of configASSERT: it may be compiled out.
-        const bool esc_ok = esc_.init(fc::config::kEsc);
+        const bool esc_ok = esc_.init(rfs::fc::kEscConfig);
         configASSERT(esc_ok);
         (void)esc_ok;
     }
@@ -60,7 +61,7 @@ public:
         return 0;  // TODO: free-running 32-bit timer extended to 64 bits
     }
 
-    bool wait_imu(fc::ImuSample& out, uint32_t timeout_ms) override
+    bool wait_imu(rfs::fc::ImuSample& out, uint32_t timeout_ms) override
     {
         imu_task_ = xTaskGetCurrentTaskHandle();
         if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout_ms)) == 0)
@@ -72,12 +73,12 @@ public:
         return true;
     }
 
-    void read_rc(fc::RcInput& out) override
+    void read_rc(rfs::fc::RcInput& out) override
     {
         out.valid = false;  // TODO: SBUS/CRSF receiver
     }
 
-    void write_motors(const fc::ActuatorOutputs& outputs) override { esc_.write(outputs); }
+    void write_motors(const rfs::fc::ActuatorOutputs& outputs) override { esc_.write(outputs); }
 
     std::size_t link_write(const uint8_t* data, std::size_t len) override
     {
@@ -106,14 +107,14 @@ public:
 private:
     TaskHandle_t imu_task_ = nullptr;
     TemplateEscBus esc_bus_;
-    fc::esc::EscOutput esc_{esc_bus_};
+    rfs::fc::EscOutput esc_{esc_bus_};
 };
 
 TemplateBoard g_board;
 
 }  // namespace
 
-fc::Board& fc::board()
+rfs::fc::Board& rfs::fc::board()
 {
     return g_board;
 }

@@ -1,8 +1,8 @@
-#include "perception/obstacle_detector.hpp"
+#include "rfs/perception/obstacle_detector.hpp"
 
 #include <cmath>
 
-namespace uav::perception
+namespace rfs::perception
 {
 
 std::optional<Obstacle> ObstacleDetector::nearest(const DepthImage& image) const
@@ -38,4 +38,4 @@ std::optional<Obstacle> ObstacleDetector::nearest(const DepthImage& image) const
     return best;
 }
 
-}  // namespace uav::perception
+}  // namespace rfs::perception

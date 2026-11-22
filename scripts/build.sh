@@ -21,7 +21,7 @@
 #   -h, --help      show this help
 #
 # Build directories: $BUILD_ROOT/<target>/<module>, target = host | arm64 | fw-<BOARD>.
-# Every build uses -Werror (UAV_WARNINGS_AS_ERRORS), the same as CI.
+# Every build uses -Werror (RFS_WARNINGS_AS_ERRORS), the same as CI.
 #
 # Environment:
 #   BUILD_ROOT   build directory root (default: <repo>/build)
@@ -165,7 +165,7 @@ build_one() {
     local target=$1 module=$2
     local dir="$BUILD_ROOT/$target/$module"
     local args=(-S "$REPO_ROOT/$module" -B "$dir" "${generator[@]}"
-        -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DUAV_WARNINGS_AS_ERRORS=ON)
+        -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DRFS_WARNINGS_AS_ERRORS=ON)
     case "$target" in
     host)
         if [[ "$module" == flight-controller ]]; then

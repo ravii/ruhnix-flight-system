@@ -7,8 +7,8 @@
 #   1. set FC_FREERTOS_PORT
 #   2. set CPU flags with add_compile_options()/add_link_options()
 #   3. define a static library target named `fc_bsp` that implements
-#      fc::Board and fc::board() (bsp/include/fc/bsp/board.hpp), with motors
-#      driven through fc::EscBus + fc::esc::EscOutput (see board.cpp)
+#      rfs::fc::Board and rfs::fc::board() (bsp/include/rfs/fc/bsp/board.hpp), with motors
+#      driven through rfs::fc::EscBus + rfs::fc::EscOutput (see board.cpp)
 #
 # Vendor code (CubeMX/HAL/CMSIS) goes in bsp/<board>/vendor/ and is not clang-formatted.
 
@@ -21,7 +21,7 @@ add_link_options(${_cpu_flags} -T${CMAKE_CURRENT_LIST_DIR}/linker.ld)
 add_library(fc_bsp STATIC
     ${CMAKE_CURRENT_LIST_DIR}/vendor/startup.s   # vector table, Reset_Handler (calls __libc_init_array)
     ${CMAKE_CURRENT_LIST_DIR}/vendor/system.c    # clock tree, SystemCoreClock
-    ${CMAKE_CURRENT_LIST_DIR}/board.cpp)         # fc::Board implementation
+    ${CMAKE_CURRENT_LIST_DIR}/board.cpp)         # rfs::fc::Board implementation
 target_include_directories(fc_bsp PUBLIC
     ${CMAKE_CURRENT_LIST_DIR}/../include
     ${CMAKE_CURRENT_LIST_DIR}/../../config       # esc_config.hpp

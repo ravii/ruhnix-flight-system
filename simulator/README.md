@@ -37,11 +37,11 @@
 
 | 方式 | `FcLink` 实现 | 飞控侧 | 用途 |
 |------|---------------|--------|------|
-| 算法闭环 | `InProcessLink`：在进程内直接调用 `fc::FlightControl::update()` | 只有 `flight-controller/core`，不带 RTOS | 调算法、调参数、在 CI 里做回归测试。最快，可以单步调试 |
+| 算法闭环 | `InProcessLink`：在进程内直接调用 `rfs::fc::FlightControl::update()` | 只有 `flight-controller/core`，不带 RTOS | 调算法、调参数、在 CI 里做回归测试。最快，可以单步调试 |
 | SITL | `UdpLink` | 完整固件 + FreeRTOS POSIX port + `bsp/sim`（UDP 版的 `SimBackend`） | 验证任务调度、通信协议，和感知、定位模块联调 |
 | HITL | `SerialLink` | 真实飞控板 + `bsp/sim`（串口版的 `SimBackend`） | 上真机之前的最后一道验证 |
 
-SITL 和 HITL 走的是同一组协议消息（`common/protocol` 里的 `UAV_MSG_SIM_SENSORS` 和 `UAV_MSG_SIM_ACTUATORS`），所以仿真器这边的代码是同一套。
+SITL 和 HITL 走的是同一组协议消息（`rfs::common` 里的 `MsgId::kSimSensors` 和 `MsgId::kSimActuators`），所以仿真器这边的代码是同一套。
 
 ## 构建
 

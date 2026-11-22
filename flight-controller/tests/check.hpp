@@ -4,10 +4,10 @@
 #include <cmath>
 #include <cstdio>
 
-namespace test
+namespace rfs::fc
 {
-inline int failures = 0;
-}
+inline int test_failures = 0;
+}  // namespace rfs::fc
 
 #define CHECK(cond)                                                                       \
     do                                                                                    \
@@ -15,12 +15,13 @@ inline int failures = 0;
         if (!(cond))                                                                      \
         {                                                                                 \
             std::fprintf(stderr, "%s:%d: CHECK failed: %s\n", __FILE__, __LINE__, #cond); \
-            ++test::failures;                                                             \
+            ++rfs::fc::test_failures;                                                     \
         }                                                                                 \
     } while (0)
 
 #define CHECK_NEAR(a, b, tol) CHECK(std::fabs((a) - (b)) < (tol))
 
-#define TEST_MAIN_RESULT(name)                                                            \
-    (test::failures ? (std::fprintf(stderr, "%d check(s) failed\n", test::failures), 1) : \
-                      (std::printf("all %s tests passed\n", name), 0))
+#define TEST_MAIN_RESULT(name)                                                          \
+    (rfs::fc::test_failures ?                                                           \
+            (std::fprintf(stderr, "%d check(s) failed\n", rfs::fc::test_failures), 1) : \
+            (std::printf("all %s tests passed\n", name), 0))

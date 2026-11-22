@@ -1,6 +1,6 @@
 # localization — 定位
 
-运行在机载 Linux 计算机上的定位服务。它融合飞控转发的 IMU 数据和外部位置观测（GNSS、视觉里程计、动捕），输出 `UAV_MSG_POSE_ESTIMATE`。
+运行在机载 Linux 计算机上的定位服务。它融合飞控转发的 IMU 数据和外部位置观测（GNSS、视觉里程计、动捕），输出 `MsgId::kPoseEstimate`。
 
 ## 当前状态
 

@@ -7,7 +7,7 @@
 #   scripts/wsl.sh scripts/build_all.sh simulator   only some modules
 #   scripts/wsl.sh                             interactive WSL shell in the repo
 #
-# BUILD_ROOT defaults to ~/uav-build inside WSL: building on /mnt/* is slow, so
+# BUILD_ROOT defaults to ~/rfs-build inside WSL: building on /mnt/* is slow, so
 # build output stays on the WSL filesystem. Sources are read from /mnt/<drive>.
 
 set -euo pipefail
@@ -22,7 +22,7 @@ if ! command -v wsl.exe >/dev/null 2>&1; then
     exit 2
 fi
 
-setup='export BUILD_ROOT="${BUILD_ROOT:-$HOME/uav-build}"'
+setup='export BUILD_ROOT="${BUILD_ROOT:-$HOME/rfs-build}"'
 if [[ $# -eq 0 ]]; then
     exec wsl.exe --cd "$(cygpath -w "$REPO_ROOT")" -e bash -lc "$setup; exec bash -l"
 fi

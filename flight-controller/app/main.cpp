@@ -3,18 +3,18 @@
 #include "task.h"
 
 #include "control_task.hpp"
-#include "fc/bsp/board.hpp"
-#include "fc/flight_control.hpp"
+#include "rfs/fc/bsp/board.hpp"
+#include "rfs/fc/flight_control.hpp"
 #include "telemetry_task.hpp"
 
 int main()
 {
-    fc::Board& board = fc::board();
+    rfs::fc::Board& board = rfs::fc::board();
     board.init();
 
-    static fc::FlightControl control;
-    static app::ControlTask control_task(board, control);
-    static app::TelemetryTask telemetry_task(board);
+    static rfs::fc::FlightControl control;
+    static rfs::fc::ControlTask control_task(board, control);
+    static rfs::fc::TelemetryTask telemetry_task(board);
 
     // Keep side effects out of configASSERT: it may be compiled out.
     const bool started = control_task.start("control", 1024, configMAX_PRIORITIES - 1) &&

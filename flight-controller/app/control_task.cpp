@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-namespace app
+namespace rfs::fc
 {
 namespace
 {
@@ -18,12 +18,12 @@ void ControlTask::run()
     uint64_t last_us = 0;
     for (;;)
     {
-        fc::FlightControl::Input in;
+        FlightControl::Input in;
         if (!board_.wait_imu(in.imu, kImuTimeoutMs))
         {
             // IMU (or simulator link) lost: cut the motors.
             control_.reset();
-            board_.write_motors(fc::ActuatorOutputs{});
+            board_.write_motors(ActuatorOutputs{});
             last_us = 0;
             continue;
         }
@@ -36,9 +36,9 @@ void ControlTask::run()
         }
         last_us = in.imu.timestamp_us;
 
-        const fc::ActuatorOutputs out = control_.update(in, std::clamp(dt, kMinDt, kMaxDt));
+        const ActuatorOutputs out = control_.update(in, std::clamp(dt, kMinDt, kMaxDt));
         board_.write_motors(out);
     }
 }
 
-}  // namespace app
+}  // namespace rfs::fc

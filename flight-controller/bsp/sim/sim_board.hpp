@@ -1,5 +1,5 @@
 /**
- * fc::Board implementation backed by a simulator.
+ * rfs::fc::Board implementation backed by a simulator.
  *
  * Each wait_imu() consumes one lockstep sensor packet; the packet's time
  * becomes the board clock, so the firmware runs on simulation time.
@@ -8,10 +8,10 @@
  */
 #pragma once
 
-#include "fc/bsp/board.hpp"
+#include "rfs/fc/bsp/board.hpp"
 #include "sim_backend.hpp"
 
-namespace fc::sim
+namespace rfs::fc
 {
 
 class SimBoard final : public Board
@@ -36,8 +36,8 @@ private:
     bool take(uint8_t flag);
 
     SimBackend& backend_;
-    uav_msg_sim_sensors_t packet_{};
-    uint8_t unread_ = 0;  ///< UAV_SIM_VALID_* bits not yet consumed
+    common::SimSensorsMsg packet_{};
+    uint8_t unread_ = 0;  ///< rfs::common::kSimValid* bits not yet consumed
 };
 
-}  // namespace fc::sim
+}  // namespace rfs::fc

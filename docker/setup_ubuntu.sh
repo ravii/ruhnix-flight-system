@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs the uav-flight toolchain on Ubuntu 26.04.
+# Installs the Ruhnix Flight System (RFS) toolchain on Ubuntu 26.04.
 #
 # Single source of truth for the development environment, used by:
 #   - docker/Dockerfile               (dev / CI image)
@@ -46,24 +46,32 @@ fi
 # scripts/confluence_sync.py (Markdown -> Confluence storage format)
 "$VENV/bin/pip" install --no-cache-dir --upgrade "markdown==${MARKDOWN_VERSION}"
 
+# The project used to be called uav-flight: drop its environment file and hooks.
+rm -f /etc/profile.d/uav-flight.sh
+for rc in /etc/zsh/zshenv /etc/bash.bashrc; do
+    if [[ -f "$rc" ]]; then
+        sed -i '/uav-flight\.sh.*# uav-flight$/d' "$rc"
+    fi
+done
+
 # Environment for login shells (WSL / native). The Docker image sets the same via ENV.
-ENV_FILE=/etc/profile.d/uav-flight.sh
+ENV_FILE=/etc/profile.d/rfs.sh
 cat > "$ENV_FILE" <<EOF
-# Added by uav-flight docker/setup_ubuntu.sh
+# Added by rfs docker/setup_ubuntu.sh
 case ":\$PATH:" in *":$VENV/bin:"*) ;; *) export PATH="$VENV/bin:\$PATH" ;; esac
 export QEMU_LD_PREFIX=/usr/aarch64-linux-gnu
 EOF
 
 # /etc/profile.d is only read by login bash. Also load it from every zsh
 # (zshenv) and from interactive non-login bash (VS Code terminals).
-hook_line="[ -r $ENV_FILE ] && . $ENV_FILE  # uav-flight"
+hook_line="[ -r $ENV_FILE ] && . $ENV_FILE  # rfs"
 for rc in /etc/zsh/zshenv /etc/bash.bashrc; do
     if [[ -f "$rc" ]] && ! grep -qF "$hook_line" "$rc"; then
         printf '\n%s\n' "$hook_line" >> "$rc"
     fi
 done
 
-echo "uav-flight toolchain installed:"
+echo "RFS toolchain installed:"
 gcc --version | head -1
 arm-none-eabi-gcc --version | head -1
 aarch64-linux-gnu-gcc --version | head -1

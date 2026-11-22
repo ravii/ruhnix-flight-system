@@ -43,10 +43,10 @@
 
 | 链路 | 物理层 | 协议 | 定义位置 |
 |------|--------|------|----------|
-| 飞控 ↔ 机载计算机 | UART（≥ 921600 bps） | `common/protocol` 帧 | [frame.h](../common/protocol/include/uav/protocol/frame.h) |
+| 飞控 ↔ 机载计算机 | UART（≥ 921600 bps） | `rfs::common` 帧 | [frame.hpp](../common/include/rfs/common/frame.hpp) |
 | 飞控 → 电调 | 定时器 + DMA 输出 | DShot / PWM（成品电调），在 `config/esc_config.hpp` 中选择 | 协议层 [esc_output.hpp](../flight-controller/core/include/fc/esc/esc_output.hpp)，传输层 [esc_bus.hpp](../flight-controller/bsp/include/fc/bsp/esc_bus.hpp) |
 | 感知 ↔ 定位 | 同机进程间通信 | 待定（共享内存 / Unix socket） | — |
-| 模拟器 ↔ 飞控 | 进程内 / UDP / UART | `UAV_MSG_SIM_SENSORS`、`UAV_MSG_SIM_ACTUATORS`，锁步 | [messages.h](../common/protocol/include/uav/protocol/messages.h) |
+| 模拟器 ↔ 飞控 | 进程内 / UDP / UART | `MsgId::kSimSensors`、`MsgId::kSimActuators`，锁步 | [messages.hpp](../common/include/rfs/common/messages.hpp) |
 
 ## 仿真
 
@@ -61,7 +61,7 @@
                 update()  |                     |  wait_imu() / write_motors()
                           v                     v
    +--------------------------+     +-----------------------+
-   | core/  FlightControl     |     |       fc::Board       |
+   | core/  FlightControl     |     |    rfs::fc::Board     |
    |        pure function     |     +-----------------------+
    +--------------------------+          |             |
                 ^                        v             v
@@ -93,5 +93,5 @@
 1. **模块独立构建**：每个模块都有自己的 `CMakeLists.txt`，可以单独构建、测试和发布
 2. **接口集中定义**：跨模块的数据结构只在 `common/` 中定义一份
 3. **算法与平台分离**：固件中的 `core/` 不依赖 RTOS 和硬件，能在主机上测试，也能直接接到模拟器上
-4. **硬件只通过接口访问**：`fc::Board`，真机和仿真各实现一份
+4. **硬件只通过接口访问**：`rfs::fc::Board`，真机和仿真各实现一份
 5. **实时路径无动态分配**：固件只在初始化阶段分配内存，Linux 应用的实时循环中避免分配

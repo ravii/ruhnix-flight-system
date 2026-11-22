@@ -1,6 +1,6 @@
 #include "sim_board.hpp"
 
-namespace fc::sim
+namespace rfs::fc
 {
 // Protocol structs are packed: copy element-wise. Never bind references or
 // pointers to their members (unaligned access, -Waddress-of-packed-member).
@@ -27,7 +27,7 @@ bool SimBoard::wait_imu(ImuSample& out, uint32_t timeout_ms)
         return false;
     }
     unread_ = packet_.valid_flags;
-    if (!take(UAV_SIM_VALID_IMU))
+    if (!take(common::kSimValidImu))
     {
         return false;
     }
@@ -39,7 +39,7 @@ bool SimBoard::wait_imu(ImuSample& out, uint32_t timeout_ms)
 
 bool SimBoard::read_baro(BaroSample& out)
 {
-    if (!take(UAV_SIM_VALID_BARO))
+    if (!take(common::kSimValidBaro))
     {
         return false;
     }
@@ -51,7 +51,7 @@ bool SimBoard::read_baro(BaroSample& out)
 
 bool SimBoard::read_mag(MagSample& out)
 {
-    if (!take(UAV_SIM_VALID_MAG))
+    if (!take(common::kSimValidMag))
     {
         return false;
     }
@@ -62,7 +62,7 @@ bool SimBoard::read_mag(MagSample& out)
 
 bool SimBoard::read_gnss(GnssSample& out)
 {
-    if (!take(UAV_SIM_VALID_GNSS))
+    if (!take(common::kSimValidGnss))
     {
         return false;
     }
@@ -78,8 +78,8 @@ bool SimBoard::read_gnss(GnssSample& out)
 void SimBoard::read_rc(RcInput& out)
 {
     out.timestamp_us = packet_.time_us;
-    out.valid = (packet_.valid_flags & UAV_SIM_VALID_RC) != 0;
-    static_assert(RcInput::kChannels == UAV_SIM_RC_CHANNELS, "RC channel count mismatch");
+    out.valid = (packet_.valid_flags & common::kSimValidRc) != 0;
+    static_assert(RcInput::kChannels == common::kSimRcChannels, "RC channel count mismatch");
     for (std::size_t i = 0; i < RcInput::kChannels; ++i)
     {
         out.channels[i] = packet_.rc_channels[i];
@@ -88,8 +88,8 @@ void SimBoard::read_rc(RcInput& out)
 
 void SimBoard::write_motors(const ActuatorOutputs& outputs)
 {
-    static_assert(ActuatorOutputs::kMaxMotors == UAV_MAX_MOTORS, "motor count mismatch");
-    uav_msg_sim_actuators_t msg{};
+    static_assert(ActuatorOutputs::kMaxMotors == common::kMaxMotors, "motor count mismatch");
+    common::SimActuatorsMsg msg{};
     msg.time_us = packet_.time_us;
     msg.motor_count = outputs.count;
     msg.armed = outputs.armed ? 1 : 0;
@@ -100,4 +100,4 @@ void SimBoard::write_motors(const ActuatorOutputs& outputs)
     backend_.send_actuators(msg);
 }
 
-}  // namespace fc::sim
+}  // namespace rfs::fc

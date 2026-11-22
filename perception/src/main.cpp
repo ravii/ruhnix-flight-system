@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <thread>
 
-#include "perception/obstacle_detector.hpp"
+#include "rfs/perception/obstacle_detector.hpp"
 
 namespace
 {
@@ -21,7 +21,7 @@ int main()
     std::signal(SIGINT, on_signal);
     std::signal(SIGTERM, on_signal);
 
-    uav::perception::ObstacleDetector detector;
+    rfs::perception::ObstacleDetector detector;
     constexpr auto kPeriod = std::chrono::milliseconds(33);  // ~30 FPS
 
     std::printf("perception: started\n");
@@ -29,7 +29,7 @@ int main()
     while (g_running)
     {
         // TODO: grab a depth frame from the camera driver (V4L2 / vendor SDK).
-        uav::perception::DepthImage frame;
+        rfs::perception::DepthImage frame;
         if (auto obstacle = detector.nearest(frame))
         {
             // TODO: publish to localization / flight controller.

@@ -1,6 +1,6 @@
-#include "localization/pose_estimator.hpp"
+#include "rfs/localization/pose_estimator.hpp"
 
-namespace uav::localization
+namespace rfs::localization
 {
 
 PoseEstimator::PoseEstimator(const Config& config) : config_(config)
@@ -57,9 +57,9 @@ Vec3 PoseEstimator::position_variance() const
     return {cov_[0].pp, cov_[1].pp, cov_[2].pp};
 }
 
-uav_msg_pose_estimate_t PoseEstimator::to_message(uint64_t timestamp_us) const
+common::PoseEstimateMsg PoseEstimator::to_message(uint64_t timestamp_us) const
 {
-    uav_msg_pose_estimate_t msg{};
+    common::PoseEstimateMsg msg{};
     msg.timestamp_us = timestamp_us;
     for (std::size_t i = 0; i < 3; ++i)
     {
@@ -71,4 +71,4 @@ uav_msg_pose_estimate_t PoseEstimator::to_message(uint64_t timestamp_us) const
     return msg;
 }
 
-}  // namespace uav::localization
+}  // namespace rfs::localization

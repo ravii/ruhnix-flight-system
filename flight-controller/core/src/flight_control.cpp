@@ -1,8 +1,8 @@
-#include "fc/flight_control.hpp"
+#include "rfs/fc/flight_control.hpp"
 
 #include <algorithm>
 
-namespace fc
+namespace rfs::fc
 {
 
 float rc_to_bipolar(uint16_t pulse_us)
@@ -69,4 +69,4 @@ ActuatorOutputs FlightControl::update(const Input& input, float dt_s)
     return out;
 }
 
-}  // namespace fc
+}  // namespace rfs::fc

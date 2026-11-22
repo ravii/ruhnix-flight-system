@@ -1,8 +1,8 @@
-#include "fc/esc/esc_output.hpp"
+#include "rfs/fc/esc/esc_output.hpp"
 
 #include <cmath>
 
-namespace fc::esc
+namespace rfs::fc
 {
 namespace
 {
@@ -54,8 +54,8 @@ EscFrame EscOutput::encode(const ActuatorOutputs& outputs) const
         uint32_t value = 0;
         if (dshot)
         {
-            value = run ? dshot::encode(dshot::throttle_value(outputs.motors[i]), false, bidir) :
-                          dshot::command_frame(dshot::Command::kMotorStop, bidir);
+            value = run ? dshot_encode(dshot_throttle_value(outputs.motors[i]), false, bidir) :
+                          dshot_command_frame(DshotCommand::kMotorStop, bidir);
         }
         else
         {
@@ -74,7 +74,7 @@ void EscOutput::write(const ActuatorOutputs& outputs)
     }
 }
 
-bool EscOutput::send_command(dshot::Command command, uint8_t motor_mask)
+bool EscOutput::send_command(DshotCommand command, uint8_t motor_mask)
 {
     if (!initialized_ || !is_dshot(config_.protocol))
     {
@@ -87,7 +87,7 @@ bool EscOutput::send_command(dshot::Command command, uint8_t motor_mask)
     {
         const bool selected = ((static_cast<unsigned>(motor_mask) >> i) & 1u) != 0;
         frame.values[config_.output_map[i]] =
-            dshot::command_frame(selected ? command : dshot::Command::kMotorStop, bidir);
+            dshot_command_frame(selected ? command : DshotCommand::kMotorStop, bidir);
     }
     bus_.send(frame);
     return true;
@@ -108,4 +108,4 @@ bool EscOutput::read_erpm(Erpm& out)
     return true;
 }
 
-}  // namespace fc::esc
+}  // namespace rfs::fc

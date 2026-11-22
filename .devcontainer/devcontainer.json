@@ -1,5 +1,5 @@
 {
-  "name": "uav-flight (Ubuntu 26.04)",
+  "name": "Ruhnix Flight System (Ubuntu 26.04)",
   "build": {
     "dockerfile": "../docker/Dockerfile",
     "context": "../docker",

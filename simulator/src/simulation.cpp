@@ -1,6 +1,6 @@
-#include "sim/simulation.hpp"
+#include "rfs/sim/simulation.hpp"
 
-namespace sim
+namespace rfs::sim
 {
 
 Simulation::Simulation(
@@ -18,7 +18,7 @@ void Simulation::set_rc(const RcChannels& channels, bool valid)
 
 bool Simulation::step()
 {
-    uav_msg_sim_sensors_t packet{};
+    common::SimSensorsMsg packet{};
     sensors_.sample(vehicle_.state(), time_us_, packet);
     packet.time_us = time_us_;
     for (std::size_t i = 0; i < rc_.size(); ++i)
@@ -27,10 +27,10 @@ bool Simulation::step()
     }
     if (rc_valid_)
     {
-        packet.valid_flags = static_cast<uint8_t>(packet.valid_flags | UAV_SIM_VALID_RC);
+        packet.valid_flags = static_cast<uint8_t>(packet.valid_flags | common::kSimValidRc);
     }
 
-    uav_msg_sim_actuators_t reply{};
+    common::SimActuatorsMsg reply{};
     if (!link_.exchange(packet, reply, config_.link_timeout) || reply.time_us != time_us_)
     {
         return false;  // no answer, or an answer to a different step
@@ -42,4 +42,4 @@ bool Simulation::step()
     return true;
 }
 
-}  // namespace sim
+}  // namespace rfs::sim

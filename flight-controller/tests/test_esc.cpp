@@ -1,21 +1,18 @@
 #include "check.hpp"
 #include "esc_config.hpp"
-#include "fc/esc/dshot.hpp"
-#include "fc/esc/esc_output.hpp"
+#include "rfs/fc/esc/dshot.hpp"
+#include "rfs/fc/esc/esc_output.hpp"
 
 namespace
 {
 
-namespace dshot = fc::esc::dshot;
-using fc::esc::EscConfig;
-using fc::esc::EscOutput;
-using fc::esc::Protocol;
+using namespace rfs::fc;
 
 /** Records what EscOutput hands to the board. */
-class FakeEscBus final : public fc::EscBus
+class FakeEscBus final : public rfs::fc::EscBus
 {
 public:
-    bool configure(Protocol p, bool bidir, uint8_t count) override
+    bool configure(EscProtocol p, bool bidir, uint8_t count) override
     {
         configured = true;
         protocol = p;
@@ -24,13 +21,13 @@ public:
         return accept_configure;
     }
 
-    void send(const fc::esc::EscFrame& frame) override
+    void send(const rfs::fc::EscFrame& frame) override
     {
         last = frame;
         ++sends;
     }
 
-    bool read_erpm(std::array<uint32_t, fc::ActuatorOutputs::kMaxMotors>& out) override
+    bool read_erpm(std::array<uint32_t, rfs::fc::ActuatorOutputs::kMaxMotors>& out) override
     {
         out = erpm;
         return has_erpm;
@@ -38,18 +35,18 @@ public:
 
     bool accept_configure = true;
     bool configured = false;
-    Protocol protocol = Protocol::kPwm;
+    EscProtocol protocol = EscProtocol::kPwm;
     bool bidirectional = false;
     uint8_t channel_count = 0;
-    fc::esc::EscFrame last{};
+    rfs::fc::EscFrame last{};
     int sends = 0;
-    std::array<uint32_t, fc::ActuatorOutputs::kMaxMotors> erpm{};
+    std::array<uint32_t, rfs::fc::ActuatorOutputs::kMaxMotors> erpm{};
     bool has_erpm = false;
 };
 
-fc::ActuatorOutputs armed_outputs(float a, float b, float c, float d)
+rfs::fc::ActuatorOutputs armed_outputs(float a, float b, float c, float d)
 {
-    fc::ActuatorOutputs out;
+    rfs::fc::ActuatorOutputs out;
     out.count = 4;
     out.armed = true;
     out.motors[0] = a;
@@ -59,7 +56,7 @@ fc::ActuatorOutputs armed_outputs(float a, float b, float c, float d)
     return out;
 }
 
-EscConfig config_with(Protocol protocol)
+EscConfig config_with(EscProtocol protocol)
 {
     EscConfig c{};
     c.protocol = protocol;
@@ -71,62 +68,62 @@ EscConfig config_with(Protocol protocol)
 void test_dshot_reference_frame()
 {
     // Value 1046 without telemetry: packet 0x82C, CRC 0x82C ^ 0x82 ^ 0x8 = 0x..6.
-    CHECK(dshot::encode(1046, false, false) == 0x82C6);
-    CHECK(dshot::encode(1046, true, false) == 0x82D7);
+    CHECK(dshot_encode(1046, false, false) == 0x82C6);
+    CHECK(dshot_encode(1046, true, false) == 0x82D7);
     // Bidirectional DShot inverts the CRC.
-    CHECK(dshot::encode(1046, false, true) == 0x82C9);
+    CHECK(dshot_encode(1046, false, true) == 0x82C9);
 }
 
 void test_dshot_value_is_clamped()
 {
-    CHECK(dshot::encode(5000, false, false) == dshot::encode(dshot::kValueMax, false, false));
+    CHECK(dshot_encode(5000, false, false) == dshot_encode(kDshotValueMax, false, false));
 }
 
 void test_dshot_throttle_mapping()
 {
-    CHECK(dshot::throttle_value(0.0f) == dshot::kThrottleMin);
-    CHECK(dshot::throttle_value(1.0f) == dshot::kThrottleMax);
-    CHECK(dshot::throttle_value(0.5f) == 1048);  // 48 + round(0.5 * 1999)
-    CHECK(dshot::throttle_value(-1.0f) == dshot::kThrottleMin);
-    CHECK(dshot::throttle_value(2.0f) == dshot::kThrottleMax);
-    CHECK(dshot::throttle_value(std::nanf("")) == dshot::kThrottleMin);
+    CHECK(dshot_throttle_value(0.0f) == kDshotThrottleMin);
+    CHECK(dshot_throttle_value(1.0f) == kDshotThrottleMax);
+    CHECK(dshot_throttle_value(0.5f) == 1048);  // 48 + round(0.5 * 1999)
+    CHECK(dshot_throttle_value(-1.0f) == kDshotThrottleMin);
+    CHECK(dshot_throttle_value(2.0f) == kDshotThrottleMax);
+    CHECK(dshot_throttle_value(std::nanf("")) == kDshotThrottleMin);
 }
 
 void test_dshot_commands()
 {
-    CHECK(dshot::command_frame(dshot::Command::kMotorStop, false) == 0x0000);
-    CHECK(dshot::command_frame(dshot::Command::kMotorStop, true) == 0x000F);
+    CHECK(dshot_command_frame(DshotCommand::kMotorStop, false) == 0x0000);
+    CHECK(dshot_command_frame(DshotCommand::kMotorStop, true) == 0x000F);
     // Beep1: value 1 with the telemetry bit -> packet 0x003, CRC 0x3.
-    CHECK(dshot::command_frame(dshot::Command::kBeep1, false) == 0x0033);
+    CHECK(dshot_command_frame(DshotCommand::kBeep1, false) == 0x0033);
 }
 
 // ---- configuration ----------------------------------------------------------
 
 void test_config_validation()
 {
-    CHECK(fc::esc::is_valid(EscConfig{}));
+    CHECK(rfs::fc::is_valid(EscConfig{}));
 
     EscConfig c{};
     c.motor_count = 0;
-    CHECK(!fc::esc::is_valid(c));
+    CHECK(!rfs::fc::is_valid(c));
 
     c = EscConfig{};
     c.motor_count = 9;
-    CHECK(!fc::esc::is_valid(c));
+    CHECK(!rfs::fc::is_valid(c));
 
     c = EscConfig{};
     c.output_map = {{0, 0, 2, 3, 4, 5, 6, 7}};  // channel 0 used twice
-    CHECK(!fc::esc::is_valid(c));
+    CHECK(!rfs::fc::is_valid(c));
 
     c = EscConfig{};
     c.output_map = {{0, 1, 2, 4, 3, 5, 6, 7}};  // channel 4 with only 4 motors
-    CHECK(!fc::esc::is_valid(c));
+    CHECK(!rfs::fc::is_valid(c));
 
-    c = config_with(Protocol::kPwm);
+    c = config_with(EscProtocol::kPwm);
     c.bidirectional = true;
-    CHECK(!fc::esc::is_valid(c));
+    CHECK(!rfs::fc::is_valid(c));
 
-    CHECK(fc::esc::is_valid(fc::config::kEsc));
+    CHECK(rfs::fc::is_valid(rfs::fc::kEscConfig));
 }
 
 // ---- EscOutput --------------------------------------------------------------
@@ -135,11 +132,11 @@ void test_init_configures_bus()
 {
     FakeEscBus bus;
     EscOutput esc(bus);
-    EscConfig c = config_with(Protocol::kDShot300);
+    EscConfig c = config_with(EscProtocol::kDShot300);
     c.bidirectional = true;
     CHECK(esc.init(c));
     CHECK(bus.configured);
-    CHECK(bus.protocol == Protocol::kDShot300);
+    CHECK(bus.protocol == EscProtocol::kDShot300);
     CHECK(bus.bidirectional);
     CHECK(bus.channel_count == 4);
 }
@@ -164,7 +161,7 @@ void test_dshot_disarmed_sends_motor_stop()
     FakeEscBus bus;
     EscOutput esc(bus);
     CHECK(esc.init(EscConfig{}));
-    fc::ActuatorOutputs out = armed_outputs(0.7f, 0.7f, 0.7f, 0.7f);
+    rfs::fc::ActuatorOutputs out = armed_outputs(0.7f, 0.7f, 0.7f, 0.7f);
     out.armed = false;
     esc.write(out);
     CHECK(bus.sends == 1);
@@ -183,10 +180,10 @@ void test_dshot_armed_follows_output_map()
     c.output_map = {{2, 0, 3, 1, 4, 5, 6, 7}};
     CHECK(esc.init(c));
     esc.write(armed_outputs(0.0f, 1.0f, 0.5f, 0.0f));
-    CHECK(bus.last.values[2] == dshot::encode(dshot::kThrottleMin, false, false));  // motor 0
-    CHECK(bus.last.values[0] == dshot::encode(dshot::kThrottleMax, false, false));  // motor 1
-    CHECK(bus.last.values[3] == dshot::encode(1048, false, false));                 // motor 2
-    CHECK(bus.last.values[1] == dshot::encode(dshot::kThrottleMin, false, false));  // motor 3
+    CHECK(bus.last.values[2] == dshot_encode(kDshotThrottleMin, false, false));  // motor 0
+    CHECK(bus.last.values[0] == dshot_encode(kDshotThrottleMax, false, false));  // motor 1
+    CHECK(bus.last.values[3] == dshot_encode(1048, false, false));               // motor 2
+    CHECK(bus.last.values[1] == dshot_encode(kDshotThrottleMin, false, false));  // motor 3
 }
 
 void test_motors_beyond_output_count_are_stopped()
@@ -194,7 +191,7 @@ void test_motors_beyond_output_count_are_stopped()
     FakeEscBus bus;
     EscOutput esc(bus);
     CHECK(esc.init(EscConfig{}));
-    fc::ActuatorOutputs out = armed_outputs(0.5f, 0.5f, 0.5f, 0.5f);
+    rfs::fc::ActuatorOutputs out = armed_outputs(0.5f, 0.5f, 0.5f, 0.5f);
     out.count = 2;
     esc.write(out);
     CHECK(bus.last.values[1] != 0);
@@ -206,16 +203,16 @@ void test_analog_pulse_widths()
 {
     FakeEscBus bus;
     EscOutput esc(bus);
-    CHECK(esc.init(config_with(Protocol::kPwm)));
+    CHECK(esc.init(config_with(EscProtocol::kPwm)));
     esc.write(armed_outputs(0.0f, 0.5f, 1.0f, std::nanf("")));
     CHECK(bus.last.values[0] == 1000000);
     CHECK(bus.last.values[1] == 1500000);
     CHECK(bus.last.values[2] == 2000000);
     CHECK(bus.last.values[3] == 1000000);
 
-    fc::ActuatorOutputs disarmed = armed_outputs(1.0f, 1.0f, 1.0f, 1.0f);
+    rfs::fc::ActuatorOutputs disarmed = armed_outputs(1.0f, 1.0f, 1.0f, 1.0f);
     disarmed.armed = false;
-    CHECK(esc.init(config_with(Protocol::kOneShot125)));
+    CHECK(esc.init(config_with(EscProtocol::kOneShot125)));
     esc.write(disarmed);
     CHECK(bus.last.values[0] == 125000);
     esc.write(armed_outputs(1.0f, 1.0f, 1.0f, 1.0f));
@@ -226,15 +223,15 @@ void test_commands()
 {
     FakeEscBus bus;
     EscOutput esc(bus);
-    CHECK(esc.init(config_with(Protocol::kPwm)));
-    CHECK(!esc.send_command(dshot::Command::kBeep1, 0x01));
+    CHECK(esc.init(config_with(EscProtocol::kPwm)));
+    CHECK(!esc.send_command(DshotCommand::kBeep1, 0x01));
     CHECK(bus.sends == 0);
 
     EscConfig c{};
     c.output_map = {{3, 2, 1, 0, 4, 5, 6, 7}};
     CHECK(esc.init(c));
-    CHECK(esc.send_command(dshot::Command::kBeep1, 0x01));  // logical motor 0 -> channel 3
-    CHECK(bus.last.values[3] == dshot::command_frame(dshot::Command::kBeep1, false));
+    CHECK(esc.send_command(DshotCommand::kBeep1, 0x01));  // logical motor 0 -> channel 3
+    CHECK(bus.last.values[3] == dshot_command_frame(DshotCommand::kBeep1, false));
     CHECK(bus.last.values[0] == 0);
     CHECK(bus.last.values[1] == 0);
     CHECK(bus.last.values[2] == 0);
@@ -244,7 +241,7 @@ void test_erpm_is_reported_per_logical_motor()
 {
     FakeEscBus bus;
     EscOutput esc(bus);
-    EscConfig c = config_with(Protocol::kDShot600);
+    EscConfig c = config_with(EscProtocol::kDShot600);
     c.bidirectional = true;
     c.output_map = {{1, 0, 2, 3, 4, 5, 6, 7}};
     CHECK(esc.init(c));

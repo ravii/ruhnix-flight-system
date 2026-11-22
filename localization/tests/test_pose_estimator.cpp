@@ -1,7 +1,7 @@
 #include <cmath>
 #include <cstdio>
 
-#include "localization/pose_estimator.hpp"
+#include "rfs/localization/pose_estimator.hpp"
 
 namespace
 {
@@ -16,7 +16,7 @@ int failures = 0;
         }                                                                                 \
     } while (0)
 
-using uav::localization::PoseEstimator;
+using rfs::localization::PoseEstimator;
 
 void test_predict_constant_acceleration()
 {

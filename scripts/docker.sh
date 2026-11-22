@@ -7,14 +7,14 @@
 #                                    scripts/docker.sh run scripts/build_all.sh
 #
 # Environment:
-#   UAV_IMAGE        image name (default: uav-flight-dev:ubuntu26.04)
-#   UAV_BASE_IMAGE   base image override (default: ubuntu:26.04 from Docker Hub)
-#   UAV_DOCKER_ARGS  extra `docker run` arguments, e.g. "--privileged -v /dev/bus/usb:/dev/bus/usb"
+#   RFS_IMAGE        image name (default: rfs-dev:ubuntu26.04)
+#   RFS_BASE_IMAGE   base image override (default: ubuntu:26.04 from Docker Hub)
+#   RFS_DOCKER_ARGS  extra `docker run` arguments, e.g. "--privileged -v /dev/bus/usb:/dev/bus/usb"
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-IMAGE="${UAV_IMAGE:-uav-flight-dev:ubuntu26.04}"
+IMAGE="${RFS_IMAGE:-rfs-dev:ubuntu26.04}"
 
 # Git Bash on Windows rewrites /workspace-style arguments into Windows paths.
 export MSYS_NO_PATHCONV=1
@@ -32,8 +32,8 @@ if [[ "$(uname -s)" == Linux ]]; then
     # Match the host user so files created in /workspace keep the right owner.
     build_args+=(--build-arg "USER_UID=$(id -u)" --build-arg "USER_GID=$(id -g)")
 fi
-if [[ -n "${UAV_BASE_IMAGE:-}" ]]; then
-    build_args+=(--build-arg "BASE_IMAGE=$UAV_BASE_IMAGE")
+if [[ -n "${RFS_BASE_IMAGE:-}" ]]; then
+    build_args+=(--build-arg "BASE_IMAGE=$RFS_BASE_IMAGE")
 fi
 
 run_container() {
@@ -50,7 +50,7 @@ run_container() {
         -v "$(host_path "$REPO_ROOT"):/workspace" \
         -w /workspace \
         -e BUILD_ROOT=/workspace/build/docker \
-        ${UAV_DOCKER_ARGS:-} \
+        ${RFS_DOCKER_ARGS:-} \
         "$IMAGE" "$@"
 }
 

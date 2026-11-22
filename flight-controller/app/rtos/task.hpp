@@ -4,7 +4,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-namespace rtos
+namespace rfs::fc
 {
 
 class Task
@@ -37,4 +37,4 @@ private:
     TaskHandle_t handle_ = nullptr;
 };
 
-}  // namespace rtos
+}  // namespace rfs::fc

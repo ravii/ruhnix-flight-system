@@ -1,8 +1,8 @@
-#include "fc/mixer.hpp"
+#include "rfs/fc/mixer.hpp"
 
 #include <algorithm>
 
-namespace fc
+namespace rfs::fc
 {
 namespace
 {
@@ -44,4 +44,4 @@ QuadXMixer::Output QuadXMixer::mix(const Vec3& torque, float thrust) const
     return out;
 }
 
-}  // namespace fc
+}  // namespace rfs::fc

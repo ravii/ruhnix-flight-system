@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(uav_localization VERSION 0.1.0 LANGUAGES C CXX)
+project(rfs_localization VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -10,19 +10,19 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/UavCommon.cmake)
-uav_use_common()
+include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/RfsCommon.cmake)
+rfs_use_common()
 find_package(Threads REQUIRED)
 
 add_library(localization_lib STATIC
     src/pose_estimator.cpp)
 target_include_directories(localization_lib PUBLIC include)
-target_link_libraries(localization_lib PUBLIC uav::common)
-uav_set_warnings(localization_lib)
+target_link_libraries(localization_lib PUBLIC rfs::common)
+rfs_set_warnings(localization_lib)
 
 add_executable(localization src/main.cpp)
 target_link_libraries(localization PRIVATE localization_lib Threads::Threads)
-uav_set_warnings(localization)
+rfs_set_warnings(localization)
 
 install(TARGETS localization RUNTIME DESTINATION bin)
 

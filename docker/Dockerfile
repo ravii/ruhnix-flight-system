@@ -1,4 +1,4 @@
-# Development / CI image for uav-flight: build, run and debug every module.
+# Development / CI image for the Ruhnix Flight System (RFS): build, run and debug every module.
 #
 #   scripts/docker.sh build     # build this image
 #   scripts/docker.sh shell     # interactive shell with the repo at /workspace
@@ -12,7 +12,7 @@
 #   format      clang-format (pinned, from PyPI)        must match scripts/format.sh
 
 # Override when Docker Hub is unreachable, e.g.
-#   UAV_BASE_IMAGE=public.ecr.aws/docker/library/ubuntu:26.04 scripts/docker.sh build
+#   RFS_BASE_IMAGE=public.ecr.aws/docker/library/ubuntu:26.04 scripts/docker.sh build
 ARG BASE_IMAGE=ubuntu:26.04
 FROM ${BASE_IMAGE}
 

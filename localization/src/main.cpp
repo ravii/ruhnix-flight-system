@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <thread>
 
-#include "localization/pose_estimator.hpp"
+#include "rfs/localization/pose_estimator.hpp"
 
 namespace
 {
@@ -21,7 +21,7 @@ int main()
     std::signal(SIGINT, on_signal);
     std::signal(SIGTERM, on_signal);
 
-    uav::localization::PoseEstimator estimator;
+    rfs::localization::PoseEstimator estimator;
     constexpr auto kPeriod = std::chrono::milliseconds(5);  // 200 Hz
     constexpr float kDt = 0.005f;
 

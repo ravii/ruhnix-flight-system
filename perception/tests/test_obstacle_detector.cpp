@@ -1,7 +1,7 @@
 #include <cstdio>
 #include <limits>
 
-#include "perception/obstacle_detector.hpp"
+#include "rfs/perception/obstacle_detector.hpp"
 
 namespace
 {
@@ -16,7 +16,7 @@ int failures = 0;
         }                                                                                 \
     } while (0)
 
-using namespace uav::perception;
+using namespace rfs::perception;
 
 DepthImage make_image(float fill)
 {

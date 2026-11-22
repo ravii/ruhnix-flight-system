@@ -1,14 +1,15 @@
-#include "fc/esc/dshot.hpp"
+#include "rfs/fc/esc/dshot.hpp"
 
 #include <algorithm>
 #include <cmath>
 
-namespace fc::esc::dshot
+namespace rfs::fc
 {
 
-uint16_t encode(uint16_t value, bool telemetry, bool bidirectional)
+uint16_t dshot_encode(uint16_t value, bool telemetry, bool bidirectional)
 {
-    const unsigned packet = (std::min<unsigned>(value, kValueMax) << 1u) | (telemetry ? 1u : 0u);
+    const unsigned packet =
+        (std::min<unsigned>(value, kDshotValueMax) << 1u) | (telemetry ? 1u : 0u);
     unsigned crc = packet ^ (packet >> 4u) ^ (packet >> 8u);
     if (bidirectional)
     {
@@ -17,23 +18,24 @@ uint16_t encode(uint16_t value, bool telemetry, bool bidirectional)
     return static_cast<uint16_t>((packet << 4u) | (crc & 0x0Fu));
 }
 
-uint16_t throttle_value(float throttle)
+uint16_t dshot_throttle_value(float throttle)
 {
     if (!(throttle > 0.0f))  // also catches NaN
     {
-        return kThrottleMin;
+        return kDshotThrottleMin;
     }
     if (throttle >= 1.0f)
     {
-        return kThrottleMax;
+        return kDshotThrottleMax;
     }
-    constexpr float kSpan = static_cast<float>(kThrottleMax - kThrottleMin);
-    return static_cast<uint16_t>(kThrottleMin + std::lround(throttle * kSpan));
+    constexpr float kSpan = static_cast<float>(kDshotThrottleMax - kDshotThrottleMin);
+    return static_cast<uint16_t>(kDshotThrottleMin + std::lround(throttle * kSpan));
 }
 
-uint16_t command_frame(Command command, bool bidirectional)
+uint16_t dshot_command_frame(DshotCommand command, bool bidirectional)
 {
-    return encode(static_cast<uint16_t>(command), command != Command::kMotorStop, bidirectional);
+    return dshot_encode(
+        static_cast<uint16_t>(command), command != DshotCommand::kMotorStop, bidirectional);
 }
 
-}  // namespace fc::esc::dshot
+}  // namespace rfs::fc

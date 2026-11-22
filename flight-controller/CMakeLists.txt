@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.21)
-project(uav_flight_controller VERSION 0.1.0 LANGUAGES C CXX)
+project(rfs_flight_controller VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/UavCommon.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/RfsCommon.cmake)
 
 # Board to build firmware for (a directory under bsp/). Empty = host build:
 # core + simulator board + unit tests.
@@ -25,7 +25,7 @@ if(FC_BOARD)
     include(${_board_file})
 endif()
 
-uav_use_common()
+rfs_use_common()
 
 # ---- core: platform-independent algorithms (host-testable) ----------------
 add_library(fc_core STATIC
@@ -36,21 +36,21 @@ add_library(fc_core STATIC
     core/src/pid.cpp)
 target_include_directories(fc_core PUBLIC
     core/include
-    bsp/include)    # fc::Board interface; header-only, no hardware dependency
-target_link_libraries(fc_core PUBLIC uav::common)
-uav_set_warnings(fc_core)
+    bsp/include)    # rfs::fc::Board interface; header-only, no hardware dependency
+target_link_libraries(fc_core PUBLIC rfs::common)
+rfs_set_warnings(fc_core)
 
-# ---- simulator board: fc::Board backed by a simulator --------------------
+# ---- simulator board: rfs::fc::Board backed by a simulator --------------------
 add_library(fc_bsp_sim STATIC
     bsp/sim/sim_board.cpp)
 target_include_directories(fc_bsp_sim PUBLIC bsp/sim)
 target_link_libraries(fc_bsp_sim PUBLIC fc_core)
-uav_set_warnings(fc_bsp_sim)
+rfs_set_warnings(fc_bsp_sim)
 
 if(FC_BOARD)
     # ---- firmware: FreeRTOS + application ------------------------------------
-    include(${UAV_ROOT}/cmake/FreeRTOS.cmake)
-    uav_add_freertos(
+    include(${RFS_ROOT}/cmake/FreeRTOS.cmake)
+    rfs_add_freertos(
         PORT       ${FC_FREERTOS_PORT}
         HEAP       4
         CONFIG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/config)
@@ -62,7 +62,7 @@ if(FC_BOARD)
         app/telemetry_task.cpp)
     target_include_directories(flight_controller PRIVATE app)
     target_link_libraries(flight_controller PRIVATE fc_core fc_bsp freertos_kernel)
-    uav_set_warnings(flight_controller)
+    rfs_set_warnings(flight_controller)
 
     if(CMAKE_CROSSCOMPILING)
         set_target_properties(flight_controller PROPERTIES SUFFIX ".elf")

@@ -1,6 +1,6 @@
 # Adds the FreeRTOS kernel from third_party/FreeRTOS-Kernel (git submodule).
 #
-#   uav_add_freertos(
+#   rfs_add_freertos(
 #       PORT       GCC_ARM_CM4F                 # FreeRTOS port name
 #       HEAP       4                            # heap_N.c implementation
 #       CONFIG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/config)   # dir with FreeRTOSConfig.h
@@ -8,12 +8,12 @@
 # Provides the target `freertos_kernel`.
 
 include_guard(GLOBAL)
-include(${CMAKE_CURRENT_LIST_DIR}/UavCommon.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/RfsCommon.cmake)
 
-function(uav_add_freertos)
+function(rfs_add_freertos)
     cmake_parse_arguments(ARG "" "PORT;HEAP;CONFIG_DIR" "" ${ARGN})
 
-    set(kernel_dir ${UAV_ROOT}/third_party/FreeRTOS-Kernel)
+    set(kernel_dir ${RFS_ROOT}/third_party/FreeRTOS-Kernel)
     if(NOT EXISTS ${kernel_dir}/CMakeLists.txt)
         message(FATAL_ERROR
             "FreeRTOS-Kernel not found at ${kernel_dir}.\n"

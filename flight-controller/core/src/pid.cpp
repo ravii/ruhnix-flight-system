@@ -1,8 +1,8 @@
-#include "fc/pid.hpp"
+#include "rfs/fc/pid.hpp"
 
 #include <algorithm>
 
-namespace fc
+namespace rfs::fc
 {
 
 void Pid::reset()
@@ -31,4 +31,4 @@ float Pid::update(float setpoint, float measurement, float dt)
     return std::clamp(out, -gains_.output_limit, gains_.output_limit);
 }
 
-}  // namespace fc
+}  // namespace rfs::fc

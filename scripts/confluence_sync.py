@@ -6,7 +6,7 @@
     python scripts/confluence_sync.py --dump DIR   also write the converted pages to DIR
 
 Credentials come from ~/.confluence/confluence.env (override the path
-with UAV_CONFLUENCE_ENV), never from the repository:
+with RFS_CONFLUENCE_ENV), never from the repository:
 
     CONFLUENCE_BASE_URL=https://<site>.atlassian.net/wiki
     CONFLUENCE_EMAIL=<email of the Atlassian account that owns the token>
@@ -41,7 +41,7 @@ import xml.etree.ElementTree as ET
 import markdown
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
-REPO_URL = 'https://github.com/ravii/uav-flight'
+REPO_URL = 'https://github.com/ravii/ruhnix-flight-system'
 
 # Parent page for everything below: https://<site>/wiki/x/<ROOT_TINY_LINK>
 # (the space home page "My first space" of space MFS).
@@ -145,7 +145,7 @@ def content_hash(title, parent, storage):
 
 def load_credentials():
     env_file = pathlib.Path(os.environ.get(
-        'UAV_CONFLUENCE_ENV', pathlib.Path.home() / '.confluence' / 'confluence.env'))
+        'RFS_CONFLUENCE_ENV', pathlib.Path.home() / '.confluence' / 'confluence.env'))
     values = {}
     if env_file.is_file():
         for line in env_file.read_text(encoding='utf-8').splitlines():

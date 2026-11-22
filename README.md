@@ -1,4 +1,4 @@
-# uav-flight
+# Ruhnix Flight System (RFS)
 
 一个自研多旋翼无人机项目，包含 **飞控**、**感知**、**定位** 三个模块，外加一个用于调试的 **仿真器**。电调使用成品（BLHeli_32 / AM32 等），由飞控通过 DShot 驱动，本仓库不包含电调固件。
 
@@ -12,17 +12,17 @@
 | 感知 Perception | [perception/](perception/) | 机载计算机 (ARM64) | Linux | C++17 | `aarch64-linux-gnu-g++` |
 | 定位 Localization | [localization/](localization/) | 机载计算机 (ARM64) | Linux | C++17 | `aarch64-linux-gnu-g++` |
 | 仿真器 Simulator | [simulator/](simulator/) | 开发电脑 | Linux / Windows | C++17 | 主机编译器 |
-| 公共协议 Common | [common/](common/) | 所有平台 | 与平台无关 | C11 头文件 | 随使用方 |
+| 公共协议 Common | [common/](common/) | 所有平台 | 与平台无关 | C++17 | 随使用方 |
 
 ## 目录结构
 
 ```
-uav-flight/
-├── common/               # 跨模块共享：通信协议、消息定义、CRC（C 头文件，C/C++ 都能用）
+ruhnix-flight-system/
+├── common/               # 跨模块共享：通信协议、消息定义、CRC（rfs::common）
 ├── flight-controller/    # 飞控固件（FreeRTOS）
 │   ├── core/             #   纯算法：FlightControl、PID、混控器，可在主机上测试
 │   ├── app/              #   FreeRTOS 任务与应用入口
-│   ├── bsp/              #   硬件抽象 fc::Board；sim/ 是仿真板，其他子目录是真实板子
+│   ├── bsp/              #   硬件抽象 rfs::fc::Board；sim/ 是仿真板，其他子目录是真实板子
 │   ├── config/           #   FreeRTOSConfig.h
 │   └── tests/            #   主机端单元测试
 ├── perception/           # 感知应用（Linux）
@@ -45,7 +45,7 @@ uav-flight/
 
 ```bash
 # WSL 里，第一次
-git clone https://github.com/ravii/uav-flight.git ~/uav-flight && cd ~/uav-flight
+git clone https://github.com/ravii/ruhnix-flight-system.git ~/ruhnix-flight-system && cd ~/ruhnix-flight-system
 sudo bash docker/setup_ubuntu.sh
 git config core.hooksPath scripts/git-hooks
 
@@ -104,11 +104,11 @@ cmake --build build/loc-arm64
 
 | 层次 | 接入点 | 用途 |
 |------|--------|------|
-| 算法闭环 | `fc::FlightControl::update()`，纯函数 | 调算法和参数、CI 回归测试 |
+| 算法闭环 | `rfs::fc::FlightControl::update()`，纯函数 | 调算法和参数、CI 回归测试 |
 | SITL | `bsp/sim` 的 `SimBoard` + FreeRTOS POSIX port | 整套固件在电脑上运行 |
 | HITL | 真实飞控板 + 串口版 `SimBackend` | 上真机前的验证 |
 
-模拟器和飞控之间锁步运行，消息定义在 `common/protocol` 中（`UAV_MSG_SIM_SENSORS` / `UAV_MSG_SIM_ACTUATORS`）。
+模拟器和飞控之间锁步运行，消息定义在 `common` 中（`MsgId::kSimSensors` / `MsgId::kSimActuators`）。
 
 ## 代码格式化
 
@@ -128,7 +128,8 @@ scripts/format.sh --check     # 只检查不修改（CI 用）
 
 ## 开发约定
 
-- **语言**：固件和应用都用 C++17；`common/protocol` 是 C 头文件
+- **语言**：所有模块都用 C++17
+- **命名空间**：每个模块的代码都在 `rfs::<模块>` 里（`rfs::common`、`rfs::fc`、`rfs::sim`、`rfs::perception`、`rfs::localization`），下面不再分层；头文件放在 `include/rfs/<模块>/`
 - **换行符**：统一使用 LF（由 [.gitattributes](.gitattributes) 保证）
 - **分支**：`main` 保持可构建；功能开发在 `feat/<模块>-<描述>` 分支上进行
 - **提交信息**：`<模块>: <描述>`，例如 `fc: add attitude rate controller`

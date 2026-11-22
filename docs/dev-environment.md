@@ -24,8 +24,8 @@ wsl --install -d Ubuntu-26.04
 
 ```bash
 # WSL 里：仓库要放在 WSL 自己的文件系统里（不要放在 /mnt/c、/mnt/d 下，那里读写很慢）
-git clone https://github.com/ravii/uav-flight.git ~/uav-flight
-cd ~/uav-flight
+git clone https://github.com/ravii/ruhnix-flight-system.git ~/ruhnix-flight-system
+cd ~/ruhnix-flight-system
 sudo bash docker/setup_ubuntu.sh            # 安装工具链
 git config core.hooksPath scripts/git-hooks # 提交前检查格式
 exec $SHELL                                 # 重新加载 PATH（/opt/venv/bin）和 QEMU_LD_PREFIX
@@ -34,7 +34,7 @@ scripts/build.sh -t                         # 构建并测试所有模块
 
 日常用 `scripts/build.sh`：不加选项时用主机 gcc 以 Debug 构建所有模块，**不会调用任何芯片工具链**，产物在 `build/host/<模块>/`。`-t` 运行测试，`-r` 构建 Release，`-c` 先清理再构建，后面跟模块名可以只构建这几个模块。`--arm64` 交叉编译感知和定位（`build/arm64/`），`--fw <board>` 编译飞控固件（`build/fw-<board>/`）。完整说明见 `scripts/build.sh -h`。
 
-`setup_ubuntu.sh` 把环境变量写在 `/etc/profile.d/uav-flight.sh`，并且让 `/etc/zsh/zshenv` 和 `/etc/bash.bashrc` 都去加载它，所以 zsh、bash 和 VS Code 终端都能拿到。即使没拿到，`scripts/format.sh` 也会自己去 `/opt/venv/bin` 下找 clang-format。
+`setup_ubuntu.sh` 把环境变量写在 `/etc/profile.d/rfs.sh`，并且让 `/etc/zsh/zshenv` 和 `/etc/bash.bashrc` 都去加载它，所以 zsh、bash 和 VS Code 终端都能拿到。即使没拿到，`scripts/format.sh` 也会自己去 `/opt/venv/bin` 下找 clang-format。
 
 ### 从 Windows 迁移过来时
 
@@ -51,7 +51,7 @@ scripts/build.sh -t                         # 构建并测试所有模块
 
 ### 备选：在 Windows 上编辑，在 WSL 里构建（同一份代码）
 
-> 日常开发用上面那份 WSL 里的 `~/uav-flight`。这一节只适合临时情况：手头只有 Windows 盘上的 checkout（比如 `D:\Dev\...`），又要构建或调试它。
+> 日常开发用上面那份 WSL 里的 `~/ruhnix-flight-system`。这一节只适合临时情况：手头只有 Windows 盘上的 checkout（比如 `D:\Dev\...`），又要构建或调试它。
 
 这时不需要在 WSL 里再 clone 一份，WSL 可以通过 `/mnt/d/...` 直接构建这份代码：
 
@@ -62,15 +62,15 @@ scripts/wsl.sh scripts/build_all.sh simulator  # 只构建某个模块
 scripts/wsl.sh                             # 进入 WSL shell，当前目录就是这个仓库，可以直接用 gdb
 ```
 
-- 源码只有一份，WSL 从 `/mnt/<盘符>/...` 读取。构建产物放在 WSL 自己的文件系统里（`BUILD_ROOT` 默认是 `~/uav-build`），所以速度不受影响
-- 调试时在 WSL 里执行，比如 `gdb --args ~/uav-build/host/flight-controller/fc_test_core`
+- 源码只有一份，WSL 从 `/mnt/<盘符>/...` 读取。构建产物放在 WSL 自己的文件系统里（`BUILD_ROOT` 默认是 `~/rfs-build`），所以速度不受影响
+- 调试时在 WSL 里执行，比如 `gdb --args ~/rfs-build/host/flight-controller/fc_test_core`
 - VS Code 的 `Ctrl+Shift+B` 会调用 `scripts/wsl.sh` 构建，编译错误会映射回 Windows 上的文件（配置在本地的 `.vscode/tasks.json` 里）
 - Windows 上的 C/C++ 扩展只负责代码跳转（`.vscode/c_cpp_properties.json`），**不要在 Windows 上用 MSVC 构建**
 - git 操作在 Windows 上做，不要在 WSL 里对 `/mnt/d/...` 执行 git（两边的权限位和换行符处理不一样）
 
 ### VS Code
 
-在 WSL 里执行 `code ~/uav-flight`，VS Code 会通过 **WSL 扩展**（Windows 上要装 `ms-vscode-remote.remote-wsl`）连进 WSL，然后提示安装 [.vscode/extensions.json](../.vscode/extensions.json) 里推荐的扩展（CMake Tools、C/C++、clang-format、Claude Code）。这些扩展装在 WSL 里，只需要装一次。
+在 WSL 里执行 `code ~/ruhnix-flight-system`，VS Code 会通过 **WSL 扩展**（Windows 上要装 `ms-vscode-remote.remote-wsl`）连进 WSL，然后提示安装 [.vscode/extensions.json](../.vscode/extensions.json) 里推荐的扩展（CMake Tools、C/C++、clang-format、Claude Code）。这些扩展装在 WSL 里，只需要装一次。
 
 ### Claude Code
 
@@ -81,7 +81,7 @@ curl -fsSL https://claude.ai/install.sh | bash
 claude        # 第一次运行时登录
 ```
 
-Claude Code 的会话和记忆存在 `~/.claude/projects/<按项目路径生成的目录名>/` 下，所以 WSL 里的 `~/uav-flight` 和 Windows 上的 `D:\...` 是两套独立的记录。
+Claude Code 的会话和记忆存在 `~/.claude/projects/<按项目路径生成的目录名>/` 下，所以 WSL 里的 `~/ruhnix-flight-system` 和 Windows 上的 `D:\...` 是两套独立的记录。
 
 ### 网络
 
@@ -105,7 +105,7 @@ scripts/docker.sh shell                    # 进入容器
 **Docker Hub 连不上时**，换成 AWS 上的官方镜像站：
 
 ```bash
-UAV_BASE_IMAGE=public.ecr.aws/docker/library/ubuntu:26.04 scripts/docker.sh build
+RFS_BASE_IMAGE=public.ecr.aws/docker/library/ubuntu:26.04 scripts/docker.sh build
 ```
 
 [.devcontainer/](../.devcontainer/) 也保留着，在 VS Code 里可以用 **Reopen in Container** 进入同一个镜像。不过扩展和 Claude Code 都要在容器里单独装，所以日常开发还是推荐用 WSL。
@@ -154,7 +154,7 @@ openocd -f interface/stlink.cfg -f target/stm32f4x.cfg &
 gdb-multiarch build/fc-fw/flight_controller.elf -ex "target extended-remote :3333"
 ```
 
-在 Docker 容器里调试，要再把 USB 设备传进去：`UAV_DOCKER_ARGS="--privileged -v /dev/bus/usb:/dev/bus/usb" scripts/docker.sh shell`。
+在 Docker 容器里调试，要再把 USB 设备传进去：`RFS_DOCKER_ARGS="--privileged -v /dev/bus/usb:/dev/bus/usb" scripts/docker.sh shell`。
 
 ### SITL（规划中）
 
