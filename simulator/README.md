@@ -5,11 +5,19 @@
 ## 锁步（lockstep）
 
 ```
-            ┌──────────────── Simulation::step() ────────────────┐
-            │                                                    │
- VehicleModel ──真值──▶ SensorModel ──SIM_SENSORS──▶ FcLink ──▶ 飞控
-      ▲                                                 │
-      └──────────── step(actuators, dt) ◀──SIM_ACTUATORS┘
+   +--------------+     truth     +-------------+
+   | VehicleModel | ------------> | SensorModel |
+   +--------------+               +-------------+
+          ^                              |
+          |                              | (1) SIM_SENSORS
+          |                              v
+          |                       +-------------+  (2) send, wait  +-------------------+
+          |                       |   FcLink    | ---------------> | flight controller |
+          |                       |             | <--------------- |   (under test)    |
+          |                       +-------------+      reply       +-------------------+
+          |                              |
+          |   (3) step(actuators, dt)    | SIM_ACTUATORS
+          +------------------------------+
 ```
 
 每一步：传感器模型对当前真值采样 → 发给飞控并**等待**电机输出 → 物理模型推进 dt → 仿真时间 +dt。

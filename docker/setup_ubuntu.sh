@@ -10,6 +10,7 @@
 set -euo pipefail
 
 CLANG_FORMAT_VERSION="${CLANG_FORMAT_VERSION:-20.1.8}"
+MARKDOWN_VERSION="${MARKDOWN_VERSION:-3.11.3}"
 VENV=/opt/venv
 
 if [[ $EUID -ne 0 ]]; then
@@ -42,6 +43,8 @@ if [[ ! -x "$VENV/bin/python" ]]; then
     python3 -m venv "$VENV"
 fi
 "$VENV/bin/pip" install --no-cache-dir --upgrade "clang-format==${CLANG_FORMAT_VERSION}"
+# scripts/confluence_sync.py (Markdown -> Confluence storage format)
+"$VENV/bin/pip" install --no-cache-dir --upgrade "markdown==${MARKDOWN_VERSION}"
 
 # Environment for login shells (WSL / native). The Docker image sets the same via ENV.
 cat > /etc/profile.d/uav-flight.sh <<EOF

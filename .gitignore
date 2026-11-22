@@ -29,3 +29,7 @@ compile_commands.json
 __pycache__/
 *.pyc
 .venv/
+
+# Credentials (keep them in ~/.config/uav-flight/, never in the repo)
+*.env
+.env*

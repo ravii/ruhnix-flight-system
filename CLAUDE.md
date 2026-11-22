@@ -23,6 +23,11 @@ scripts/docker.sh build                       # if Docker Hub is blocked:
 
 `build_all.sh` uses GCC 15 with `-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wdouble-promotion -Wundef -Werror`, the same as CI. Do not validate with MSVC on the Windows side.
 
+## Docs
+
+- Diagrams in Markdown are pure-ASCII flowcharts (`+--+`, `|`, `-->`, `v`, `^`). Non-ASCII text (Chinese) only at the end of a line, never left of a box edge or arrow; CJK and box-drawing glyphs have font-dependent widths and break alignment. Directory trees may keep `├──`.
+- The design docs listed in `scripts/confluence_sync.py` (`DOCS`) are mirrored to Confluence. After changing one, run `python scripts/confluence_sync.py` (`--dry-run` first). Credentials live only in `~/.confluence/confluence.env` — never put tokens in the repo.
+
 ## Firmware rules
 
 - `core/` must not include FreeRTOS or hardware headers; it is driven by the simulator and unit tests.

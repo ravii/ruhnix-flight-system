@@ -21,13 +21,35 @@ tests/      主机端单元测试
 ## 电机输出（成品电调）
 
 ```
-FlightControl ──ActuatorOutputs（每个电机 0~1，与协议无关）──▶ Board::write_motors()
-                                                                  │ 真实板子
-                                                                  ▼
-                 core/esc：EscOutput  电机顺序映射 + 协议编码（DShot 帧 / CRC、PWM 脉宽）
-                                                                  │ EscFrame（原始值）
-                                                                  ▼
-                 bsp/<board>：EscBus  定时器 + DMA 产生波形
+   +----------------------------+
+   |  FlightControl::update()   |
+   +----------------------------+
+                 |
+                 | ActuatorOutputs: motors[i] in [0, 1], armed
+                 v
+   +----------------------------+
+   |   Board::write_motors()    |
+   +----------------------------+
+           |               |
+           | real board    | simulation
+           v               v
+   +----------------+   +---------------------+
+   | EscOutput      |   | SimBoard            |
+   | (core/esc)     |   | sends 0..1 to the   |
+   | map + encode   |   | simulator unchanged |
+   +----------------+   +---------------------+
+           |
+           | EscFrame: DShot frames / PWM pulse widths (ns)
+           v
+   +----------------+
+   | EscBus         |
+   | (bsp/<board>)  |
+   | timers + DMA   |
+   +----------------+
+           |
+           | DShot / PWM signal
+           v
+      ESC x N --> motors
 ```
 
 | 要改的东西 | 改哪里 |
