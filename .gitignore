@@ -30,6 +30,6 @@ __pycache__/
 *.pyc
 .venv/
 
-# Credentials (keep them in ~/.config/uav-flight/, never in the repo)
+# Credentials (keep them in ~/.confluence/, never in the repo)
 *.env
 .env*

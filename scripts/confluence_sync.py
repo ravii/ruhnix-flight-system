@@ -5,7 +5,7 @@
     python scripts/confluence_sync.py --dry-run    convert and validate only, no network
     python scripts/confluence_sync.py --dump DIR   also write the converted pages to DIR
 
-Credentials come from ~/.config/uav-flight/confluence.env (override the path
+Credentials come from ~/.confluence/confluence.env (override the path
 with UAV_CONFLUENCE_ENV), never from the repository:
 
     CONFLUENCE_BASE_URL=https://<site>.atlassian.net/wiki
@@ -145,7 +145,7 @@ def content_hash(title, parent, storage):
 
 def load_credentials():
     env_file = pathlib.Path(os.environ.get(
-        'UAV_CONFLUENCE_ENV', pathlib.Path.home() / '.config' / 'uav-flight' / 'confluence.env'))
+        'UAV_CONFLUENCE_ENV', pathlib.Path.home() / '.confluence' / 'confluence.env'))
     values = {}
     if env_file.is_file():
         for line in env_file.read_text(encoding='utf-8').splitlines():
