@@ -1,0 +1,31 @@
+# Build output
+build/
+out/
+cmake-build-*/
+CMakeUserPresets.json
+compile_commands.json
+
+# Object / binary
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.elf
+*.bin
+*.hex
+*.map
+*.exe
+
+# IDE
+.vs/
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+.DS_Store
+
+# Python tools
+__pycache__/
+*.pyc
+.venv/

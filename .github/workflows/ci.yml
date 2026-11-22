@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  host:
+    name: ${{ matrix.module }} (host)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [common, flight-controller, esc, perception, localization]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S ${{ matrix.module }} -B build -DUAV_WARNINGS_AS_ERRORS=ON
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  # Enable once FreeRTOS-Kernel is added as a submodule and a board exists in bsp/.
+  # firmware:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with: { submodules: recursive }
+  #     - run: sudo apt-get update && sudo apt-get install -y gcc-arm-none-eabi
+  #     - run: >
+  #         cmake -S flight-controller -B build-fc
+  #         -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/arm-none-eabi.cmake -DFC_BOARD=stm32f4
+  #     - run: cmake --build build-fc --parallel
