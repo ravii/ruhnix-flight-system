@@ -29,8 +29,10 @@ cd ~/uav-flight
 sudo bash docker/setup_ubuntu.sh            # 安装工具链
 git config core.hooksPath scripts/git-hooks # 提交前检查格式
 exec $SHELL                                 # 重新加载 PATH（/opt/venv/bin）和 QEMU_LD_PREFIX
-scripts/build_all.sh                        # 构建并测试所有模块
+scripts/build.sh -t                         # 构建并测试所有模块
 ```
+
+日常用 `scripts/build.sh`：不加选项时用主机 gcc 以 Debug 构建所有模块，**不会调用任何芯片工具链**，产物在 `build/host/<模块>/`。`-t` 运行测试，`-r` 构建 Release，`-c` 先清理再构建，后面跟模块名可以只构建这几个模块。`--arm64` 交叉编译感知和定位（`build/arm64/`），`--fw <board>` 编译飞控固件（`build/fw-<board>/`）。完整说明见 `scripts/build.sh -h`。
 
 `setup_ubuntu.sh` 把环境变量写在 `/etc/profile.d/uav-flight.sh`，并且让 `/etc/zsh/zshenv` 和 `/etc/bash.bashrc` 都去加载它，所以 zsh、bash 和 VS Code 终端都能拿到。即使没拿到，`scripts/format.sh` 也会自己去 `/opt/venv/bin` 下找 clang-format。
 
@@ -61,7 +63,7 @@ scripts/wsl.sh                             # 进入 WSL shell，当前目录就�
 ```
 
 - 源码只有一份，WSL 从 `/mnt/<盘符>/...` 读取。构建产物放在 WSL 自己的文件系统里（`BUILD_ROOT` 默认是 `~/uav-build`），所以速度不受影响
-- 调试时在 WSL 里执行，比如 `gdb --args ~/uav-build/flight-controller/fc_test_core`
+- 调试时在 WSL 里执行，比如 `gdb --args ~/uav-build/host/flight-controller/fc_test_core`
 - VS Code 的 `Ctrl+Shift+B` 会调用 `scripts/wsl.sh` 构建，编译错误会映射回 Windows 上的文件（配置在本地的 `.vscode/tasks.json` 里）
 - Windows 上的 C/C++ 扩展只负责代码跳转（`.vscode/c_cpp_properties.json`），**不要在 Windows 上用 MSVC 构建**
 - git 操作在 Windows 上做，不要在 WSL 里对 `/mnt/d/...` 执行 git（两边的权限位和换行符处理不一样）
@@ -115,7 +117,7 @@ CI（[.github/workflows/ci.yml](../.github/workflows/ci.yml)）在这个镜像�
 ### 主机程序（单元测试、仿真器、感知/定位的主机版本）
 
 ```bash
-gdb --args build/docker/flight-controller/fc_test_core
+gdb --args build/host/flight-controller/fc_test_core
 ```
 
 在 VS Code 里用 C/C++ 扩展的 `cppdbg` 配置（`"MIMode": "gdb"`）就能下断点。

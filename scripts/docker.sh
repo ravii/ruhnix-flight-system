@@ -41,12 +41,15 @@ run_container() {
     if [[ -t 0 && -t 1 ]]; then
         tty=(-it)
     fi
+    # BUILD_ROOT: the container sees the repo at /workspace, so its CMake caches
+    # must not share build/ with the WSL clone (different source paths).
     # shellcheck disable=SC2086
     docker run --rm "${tty[@]}" \
         --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
         --add-host=host.docker.internal:host-gateway \
         -v "$(host_path "$REPO_ROOT"):/workspace" \
         -w /workspace \
+        -e BUILD_ROOT=/workspace/build/docker \
         ${UAV_DOCKER_ARGS:-} \
         "$IMAGE" "$@"
 }

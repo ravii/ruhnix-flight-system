@@ -13,14 +13,18 @@ Monorepo of independently built modules: `common/` (C protocol headers), `flight
 Development happens in WSL2: the primary clone is `~/uav-flight` on the WSL filesystem, opened with VS Code Remote-WSL. Editing, building, testing, debugging and git all happen there. The Docker image is the CI / clean-room environment. Both get their toolchain from `docker/setup_ubuntu.sh` — add new tools there, never only in one place. See `docs/dev-environment.md`. (`scripts/wsl.sh` is a fallback that builds a Windows-drive checkout from Git Bash; it is not the normal workflow.)
 
 ```bash
-scripts/build_all.sh                          # all modules, or: scripts/build_all.sh flight-controller simulator
+scripts/build.sh                              # host Debug build of all modules (no chip toolchains); add module names to limit
+scripts/build.sh -t                           # ... and run the unit tests
+scripts/build.sh --arm64 -t                   # perception/localization for ARM64, tests under qemu
+scripts/build.sh --fw <board>                 # flight-controller firmware (arm-none-eabi, bsp/<board>)
+scripts/build_all.sh                          # = build.sh --test; what CI runs
 scripts/format.sh --check
 scripts/docker.sh run scripts/build_all.sh    # same check in the CI image
 scripts/docker.sh build                       # if Docker Hub is blocked:
                                               # UAV_BASE_IMAGE=public.ecr.aws/docker/library/ubuntu:26.04
 ```
 
-`build_all.sh` uses GCC 15 with `-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wdouble-promotion -Wundef -Werror`, the same as CI. Do not validate with MSVC on the Windows side.
+Build directories are `build/<host|arm64|fw-BOARD>/<module>`. `build.sh` uses GCC 15 with `-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wdouble-promotion -Wundef -Werror`, the same as CI. Do not validate with MSVC on the Windows side.
 
 ## Docs
 

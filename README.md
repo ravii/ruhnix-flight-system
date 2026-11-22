@@ -34,7 +34,7 @@ uav-flight/
 ├── .devcontainer/        # VS Code Dev Container 配置
 ├── docs/                 # 设计文档
 ├── tools/                # 上位机/调试工具
-└── scripts/              # docker.sh、build_all.sh、format.sh、git hook
+└── scripts/              # build.sh、build_all.sh、docker.sh、format.sh、git hook
 ```
 
 ## 开发环境（WSL2 + Docker）
@@ -50,7 +50,9 @@ sudo bash docker/setup_ubuntu.sh
 git config core.hooksPath scripts/git-hooks
 
 # 日常
-scripts/build_all.sh                       # 构建并测试所有模块
+scripts/build.sh                           # 主机 Debug 构建所有模块（开发调试用，不调用芯片工具链）
+scripts/build.sh -t                        # 构建并运行单元测试（等同于 scripts/build_all.sh）
+scripts/build.sh --arm64 / --fw <board>    # 交叉编译 ARM64 应用 / 飞控固件，详见 scripts/build.sh -h
 scripts/docker.sh run scripts/build_all.sh # 在和 CI 完全一样的容器里再跑一遍
 ```
 
