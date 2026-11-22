@@ -11,16 +11,13 @@
 
 ```bash
 # 主机
-cmake -S perception -B build/perception-host
-cmake --build build/perception-host
-ctest --test-dir build/perception-host --output-on-failure
+scripts/build.sh perception -t
 
-# 交叉编译到 ARM64
-cmake -S perception -B build/perception-arm64 \
-      -DCMAKE_TOOLCHAIN_FILE=$PWD/cmake/toolchains/aarch64-linux-gnu.cmake \
-      -DCMAKE_SYSROOT=/path/to/sysroot
-cmake --build build/perception-arm64
+# 交叉编译到 ARM64（测试在 qemu 下运行）
+scripts/build.sh --arm64 perception -t
 ```
+
+构建目录是 `build/host/perception`、`build/arm64/perception`。
 
 ## 依赖
 

@@ -127,14 +127,12 @@ gdb --args build/host/flight-controller/fc_test_core
 交叉编译出来的感知、定位程序可以用 qemu 直接运行，库路径已经通过 `QEMU_LD_PREFIX` 设好：
 
 ```bash
-cmake -S localization -B build/loc-arm64 -G Ninja \
-      -DCMAKE_TOOLCHAIN_FILE=$PWD/cmake/toolchains/aarch64-linux-gnu.cmake
-cmake --build build/loc-arm64
-qemu-aarch64 build/loc-arm64/localization_tests
+scripts/build.sh --arm64 localization
+qemu-aarch64 build/arm64/localization/localization_tests
 
 # 调试：qemu 开 gdb 端口，再用 gdb-multiarch 连上去
-qemu-aarch64 -g 1234 build/loc-arm64/localization_tests &
-gdb-multiarch build/loc-arm64/localization_tests -ex "target remote :1234"
+qemu-aarch64 -g 1234 build/arm64/localization/localization_tests &
+gdb-multiarch build/arm64/localization/localization_tests -ex "target remote :1234"
 ```
 
 ### 固件（真实飞控板）
@@ -151,11 +149,30 @@ usbipd attach --wsl --busid <BUSID>
 ```bash
 # WSL 里
 openocd -f interface/stlink.cfg -f target/stm32f4x.cfg &
-gdb-multiarch build/fc-fw/flight_controller.elf -ex "target extended-remote :3333"
+gdb-multiarch build/fw-stm32f4/flight-controller/flight_controller.elf -ex "target extended-remote :3333"
 ```
 
 在 Docker 容器里调试，要再把 USB 设备传进去：`RFS_DOCKER_ARGS="--privileged -v /dev/bus/usb:/dev/bus/usb" scripts/docker.sh shell`。
 
-### SITL（规划中）
+### SITL（整套固件在 Linux 上运行）
 
-SITL 用 FreeRTOS 的 POSIX port，需要 Linux 环境，WSL 和 Docker 都满足。
+`bsp/sitl` 用 FreeRTOS 的 POSIX port 把飞控固件编译成普通的 Linux 程序，WSL 和 Docker 里都能运行。每个 FreeRTOS 任务是一个 pthread，所以 gdb 里 `info threads` 能看到 `control`、`telemetry`、`IDLE` 等任务。
+
+```bash
+scripts/sitl.sh                 # 构建并飞一段脚本，轨迹在 build/sitl/trace.csv
+scripts/sitl.sh --check         # 并检查和进程内算法闭环的轨迹逐字节一致
+```
+
+用 gdb 调试固件时，先手动启动固件，再让模拟器连上去：
+
+```bash
+# 终端 1：固件。POSIX port 每个 tick 发一次 SIGALRM，退出调度器时用 SIGUSR1，要让 gdb 放行这两个信号
+gdb -ex 'handle SIGALRM SIGUSR1 nostop noprint pass' build/sitl/flight-controller/flight_controller
+
+# 终端 2：模拟器
+build/host/simulator/rfs_sim --udp 127.0.0.1:14560 > trace.csv
+```
+
+- 端口默认是 14560，用环境变量 `RFS_SITL_PORT` 修改
+- 在断点上停下来时，模拟器那边会等待超时（200 ms）后退出；固件这边在 IMU 超时（约 20～40 ms）后会关电机、复位控制器。所以想单步调试算法时，用不带 RTOS 的 `rfs_sim`（进程内算法闭环）更方便
+- 固件里的 `printf` 只在调度器启动前用，或者只在一个任务里用（POSIX port 的限制：stdio 内部有锁，持锁时被切换任务可能死锁）

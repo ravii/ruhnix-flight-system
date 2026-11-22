@@ -22,10 +22,10 @@ target_link_libraries(my_target PRIVATE rfs::common)
 ## 单独构建与测试
 
 ```bash
-cmake -S common -B build/common
-cmake --build build/common
-ctest --test-dir build/common --output-on-failure
+scripts/build.sh common -t
 ```
+
+构建目录是 `build/host/common`。
 
 ## 修改协议的规则
 

@@ -44,7 +44,7 @@
 | 链路 | 物理层 | 协议 | 定义位置 |
 |------|--------|------|----------|
 | 飞控 ↔ 机载计算机 | UART（≥ 921600 bps） | `rfs::common` 帧 | [frame.hpp](../common/include/rfs/common/frame.hpp) |
-| 飞控 → 电调 | 定时器 + DMA 输出 | DShot / PWM（成品电调），在 `config/esc_config.hpp` 中选择 | 协议层 [esc_output.hpp](../flight-controller/core/include/fc/esc/esc_output.hpp)，传输层 [esc_bus.hpp](../flight-controller/bsp/include/fc/bsp/esc_bus.hpp) |
+| 飞控 → 电调 | 定时器 + DMA 输出 | DShot / PWM（成品电调），在 `config/esc_config.hpp` 中选择 | 协议层 [esc_output.hpp](../flight-controller/core/include/rfs/fc/esc/esc_output.hpp)，传输层 [esc_bus.hpp](../flight-controller/bsp/include/rfs/fc/bsp/esc_bus.hpp) |
 | 感知 ↔ 定位 | 同机进程间通信 | 待定（共享内存 / Unix socket） | — |
 | 模拟器 ↔ 飞控 | 进程内 / UDP / UART | `MsgId::kSimSensors`、`MsgId::kSimActuators`，锁步 | [messages.hpp](../common/include/rfs/common/messages.hpp) |
 

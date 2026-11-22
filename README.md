@@ -27,7 +27,7 @@ ruhnix-flight-system/
 │   └── tests/            #   主机端单元测试
 ├── perception/           # 感知应用（Linux）
 ├── localization/         # 定位应用（Linux）
-├── simulator/            # 仿真器：动力学/传感器模型接口、锁步调度
+├── simulator/            # 仿真器：锁步调度、四旋翼/IMU 模型、进程内算法闭环
 ├── cmake/                # 公共 CMake 脚本与交叉编译工具链文件
 ├── third_party/          # 第三方依赖（FreeRTOS-Kernel 等，用 git submodule 引入）
 ├── docker/               # 开发容器镜像（Ubuntu 26.04）
@@ -46,12 +46,15 @@ ruhnix-flight-system/
 ```bash
 # WSL 里，第一次
 git clone https://github.com/ravii/ruhnix-flight-system.git ~/ruhnix-flight-system && cd ~/ruhnix-flight-system
+git submodule update --init                # third_party/FreeRTOS-Kernel
 sudo bash docker/setup_ubuntu.sh
 git config core.hooksPath scripts/git-hooks
 
 # 日常
 scripts/build.sh                           # 主机 Debug 构建所有模块（开发调试用，不调用芯片工具链）
-scripts/build.sh -t                        # 构建并运行单元测试（等同于 scripts/build_all.sh）
+scripts/build.sh -t                        # 构建并运行单元测试
+scripts/build_all.sh                       # 上面那条 + SITL 固件和锁步检查（CI 跑的就是它）
+scripts/sitl.sh                            # 整套固件（FreeRTOS）在 Linux 上和模拟器联调
 scripts/build.sh --arm64 / --fw <board>    # 交叉编译 ARM64 应用 / 飞控固件，详见 scripts/build.sh -h
 scripts/docker.sh run scripts/build_all.sh # 在和 CI 完全一样的容器里再跑一遍
 ```
@@ -60,42 +63,48 @@ scripts/docker.sh run scripts/build_all.sh # 在和 CI 完全一样的容器里�
 
 ## 构建
 
-以下命令在 WSL 或容器里执行。所有模块都使用 CMake（≥ 3.21），**各模块单独构建**。
-
-### 主机构建（单元测试 / 开发调试）
+以下命令在 WSL 或容器里执行。所有模块都使用 CMake（≥ 3.21），**各模块单独构建**，统一入口是 [scripts/build.sh](scripts/build.sh)：
 
 ```bash
-cmake -S flight-controller -B build/fc-host
-cmake --build build/fc-host
-ctest --test-dir build/fc-host --output-on-failure
+scripts/build.sh                         # 主机 Debug 构建全部模块
+scripts/build.sh flight-controller -t    # 只构建飞控，并运行单元测试
+scripts/build.sh --arm64 -t              # 感知、定位交叉编译到 ARM64，测试在 qemu 下运行
+scripts/build.sh --fw stm32f4            # 飞控固件（bsp/stm32f4）
+scripts/build.sh --sitl                  # 飞控固件编译成 Linux 程序（SITL，FreeRTOS POSIX port）
 ```
 
-把 `flight-controller` 换成 `common`、`simulator`、`perception` 或 `localization` 即可构建其他模块。
+构建目录是 `build/<目标>/<模块>`，目标为 `host`、`arm64`、`sitl` 或 `fw-<板子名>`，例如 `build/host/flight-controller`、`build/fw-stm32f4/flight-controller`。
 
 ### 交叉编译固件（FreeRTOS）
 
-先拉取 FreeRTOS 内核：
+FreeRTOS 内核是子模块（[third_party/](third_party/)），clone 之后执行一次：
 
 ```bash
-git submodule add https://github.com/FreeRTOS/FreeRTOS-Kernel.git third_party/FreeRTOS-Kernel
-git submodule update --init --recursive
+git submodule update --init
 ```
 
-然后在 `flight-controller/bsp/<板子名>/` 下放入板级支持包（详见 [flight-controller/bsp/README.md](flight-controller/bsp/README.md)），再执行：
+然后在 `flight-controller/bsp/<板子名>/` 下放入板级支持包（详见 [flight-controller/bsp/README.md](flight-controller/bsp/README.md)），再执行 `scripts/build.sh --fw <板子名>`。
+
+### 不用脚本，直接调用 CMake
+
+`build.sh` 只是对 CMake 的薄封装，等价的命令如下（它还会额外加上 `-DRFS_WARNINGS_AS_ERRORS=ON`）：
 
 ```bash
-cmake -S flight-controller -B build/fc-fw \
+# 主机
+cmake -S flight-controller -B build/host/flight-controller
+cmake --build build/host/flight-controller
+ctest --test-dir build/host/flight-controller --output-on-failure
+
+# 固件
+cmake -S flight-controller -B build/fw-stm32f4/flight-controller \
       -DCMAKE_TOOLCHAIN_FILE=$PWD/cmake/toolchains/arm-none-eabi.cmake \
       -DFC_BOARD=stm32f4
-cmake --build build/fc-fw
-```
+cmake --build build/fw-stm32f4/flight-controller
 
-### 交叉编译 Linux 应用
-
-```bash
-cmake -S localization -B build/loc-arm64 \
+# ARM64
+cmake -S localization -B build/arm64/localization \
       -DCMAKE_TOOLCHAIN_FILE=$PWD/cmake/toolchains/aarch64-linux-gnu.cmake
-cmake --build build/loc-arm64
+cmake --build build/arm64/localization
 ```
 
 ## 仿真调试
@@ -105,7 +114,7 @@ cmake --build build/loc-arm64
 | 层次 | 接入点 | 用途 |
 |------|--------|------|
 | 算法闭环 | `rfs::fc::FlightControl::update()`，纯函数 | 调算法和参数、CI 回归测试 |
-| SITL | `bsp/sim` 的 `SimBoard` + FreeRTOS POSIX port | 整套固件在电脑上运行 |
+| SITL | `bsp/sitl`：`SimBoard` + UDP + FreeRTOS POSIX port（`scripts/sitl.sh`） | 整套固件在电脑上运行 |
 | HITL | 真实飞控板 + 串口版 `SimBackend` | 上真机前的验证 |
 
 模拟器和飞控之间锁步运行，消息定义在 `common` 中（`MsgId::kSimSensors` / `MsgId::kSimActuators`）。
@@ -140,8 +149,8 @@ scripts/format.sh --check     # 只检查不修改（CI 用）
 - [ ] 通信协议 v1 定稿
 - [ ] 飞控：IMU 驱动 + 姿态解算 + 角速度环
 - [ ] 飞控：电机输出（协议层已完成；板级 `EscBus` 的 DShot 定时器/DMA 驱动待实现）
-- [ ] 仿真器：四旋翼动力学模型 + 进程内算法闭环
-- [ ] SITL：FreeRTOS POSIX port + UDP SimBackend
+- [x] 仿真器：四旋翼动力学模型 + 进程内算法闭环（`rfs_sim` 输出 CSV 轨迹）
+- [x] SITL：FreeRTOS POSIX port + UDP SimBackend（`scripts/sitl.sh`，CI 里检查 SITL 和算法闭环的轨迹逐字节一致）
 - [ ] 定位：IMU + 视觉/GNSS 融合
 - [ ] 感知：相机采集 + 障碍物检测
 

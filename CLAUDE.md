@@ -23,19 +23,22 @@ scripts/build.sh                              # host Debug build of all modules 
 scripts/build.sh -t                           # ... and run the unit tests
 scripts/build.sh --arm64 -t                   # perception/localization for ARM64, tests under qemu
 scripts/build.sh --fw <board>                 # flight-controller firmware (arm-none-eabi, bsp/<board>)
-scripts/build_all.sh                          # = build.sh --test; what CI runs
+scripts/build.sh --sitl                       # flight-controller firmware as a Linux process (FreeRTOS POSIX port, bsp/sitl)
+scripts/sitl.sh --check                       # SITL firmware vs simulator over UDP; trace must equal the in-process loop
+scripts/build_all.sh                          # = build.sh --host --sitl --test (incl. sitl.sh --check); what CI runs
 scripts/format.sh --check
 scripts/docker.sh run scripts/build_all.sh    # same check in the CI image
 scripts/docker.sh build                       # if Docker Hub is blocked:
                                               # RFS_BASE_IMAGE=public.ecr.aws/docker/library/ubuntu:26.04
 ```
 
-Build directories are `build/<host|arm64|fw-BOARD>/<module>`. `build.sh` uses GCC 15 with `-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wdouble-promotion -Wundef -Werror`, the same as CI. Do not validate with MSVC on the Windows side.
+Build directories are `build/<host|arm64|sitl|fw-BOARD>/<module>`. FreeRTOS-Kernel is a submodule (`git submodule update --init`). `build.sh` uses GCC 15 with `-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wdouble-promotion -Wundef -Werror`, the same as CI. Do not validate with MSVC on the Windows side.
 
 ## Docs
 
 - Diagrams in Markdown are pure-ASCII flowcharts (`+--+`, `|`, `-->`, `v`, `^`). Non-ASCII text (Chinese) only at the end of a line, never left of a box edge or arrow; CJK and box-drawing glyphs have font-dependent widths and break alignment. Directory trees may keep `├──`.
-- The design docs listed in `scripts/confluence_sync.py` (`DOCS`) are mirrored to Confluence. After changing one, run `python scripts/confluence_sync.py` (`--dry-run` first). Credentials live only in `~/.confluence/confluence.env` — never put tokens in the repo.
+- Confluence is the master for the design docs listed in `scripts/confluence_sync.py` and `docs/confluence_pages.json`, and for new design docs. Write and change them in Confluence first; the user reviews and edits the page there. Only after the review is done and the code is implemented, store the idempotent Markdown copy in the repo with `python scripts/confluence_sync.py pull` (diagrams as ASCII). Never edit the repo copy first and push it up.
+- Credentials live only in `~/.confluence/confluence.env` — never put tokens in the repo.
 
 ## Firmware rules
 
@@ -44,4 +47,6 @@ Build directories are `build/<host|arm64|fw-BOARD>/<module>`. `build.sh` uses GC
 - Hardware access only through `rfs::fc::Board`. The control loop is paced by `Board::wait_imu()`, and time only comes from `Board::time_us()` (simulation time in SITL).
 - No exceptions, no RTTI, no heap after the scheduler starts; no `std::vector`, `std::string`, `std::function`, `iostream` in firmware.
 - No side effects inside `configASSERT()`.
+- The RTOS tick is 50 Hz (20 ms). Convert timeouts with `rfs::fc::timeout_ticks()` (`rfs/fc/bsp/rtos_time.hpp`), never `pdMS_TO_TICKS()` (rounds 10 ms down to 0). Task periods must be whole ticks.
+- SITL (`bsp/sitl`): tasks must not block in syscalls (a blocked pthread still "runs" for FreeRTOS); I/O waits go through the idle hook + task notifications, see `udp_sim_backend.hpp`.
 - Protocol structs are packed: copy element-wise, never bind references or pointers to their members.

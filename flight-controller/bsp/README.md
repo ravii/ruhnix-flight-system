@@ -5,9 +5,11 @@ BSP 是飞控软件和硬件之间的抽象层。应用层只通过 [`rfs::fc::B
 ```
 bsp/
 ├── include/rfs/fc/bsp/board.hpp   rfs::fc::Board 接口（所有板子都要实现）
+├── include/rfs/fc/bsp/rtos_time.hpp  timeout_ticks()：毫秒超时 → tick（板子代码的超时都用它）
 ├── sim/                           仿真板：数据和时间都来自模拟器
 │   ├── sim_backend.hpp            和模拟器之间的传输接口（UDP 用于 SITL，串口用于 HITL）
 │   └── sim_board.{hpp,cpp}        SimBoard : rfs::fc::Board
+├── sitl/                          SITL：SimBoard + UdpSimBackend，FreeRTOS POSIX port（scripts/build.sh --sitl）
 ├── _template/                     新板子模板
 └── <board>/
     ├── board.cmake                CPU 参数、FreeRTOS port、fc_bsp 库目标
@@ -19,6 +21,7 @@ bsp/
 ## 接口约定
 
 - `wait_imu()` 决定控制环的节奏：真机上等待 IMU 的数据就绪中断（任务通知），仿真里等待下一个传感器包
+- 超时换算用 `rfs::fc::timeout_ticks(ms)`，不要用 `pdMS_TO_TICKS()`：tick 只有 50 Hz，`pdMS_TO_TICKS(10)` 是 0
 - `time_us()` 返回单调递增的微秒时间；仿真里是仿真时间
 - 可选传感器（气压计、磁力计、GNSS）只在有新数据时返回 `true`
 - 接口的析构函数是 protected 的，板子对象都是静态对象，永远不会被 delete
@@ -35,4 +38,4 @@ bsp/
 | Cortex-M4F | `GCC_ARM_CM4F` |
 | Cortex-M7 | `GCC_ARM_CM7` |
 | Cortex-M33 | `GCC_ARM_CM33_NTZ_NONSECURE` |
-| 主机 SITL（Linux） | `GCC_POSIX` |
+| 主机 SITL（Linux） | `GCC_POSIX`（已有：`bsp/sitl`） |
