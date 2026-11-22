@@ -1,5 +1,5 @@
 /*
- * Binary framing used on serial links (FC <-> companion computer, FC <-> ESC).
+ * Binary framing used on serial links (FC <-> companion computer).
  *
  *   +------+------+--------+-----+---------+-----------+-----------+
  *   | 0xA5 | 0x5A | msg_id | seq | len(LE) | payload   | crc16(LE) |

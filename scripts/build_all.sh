@@ -3,7 +3,7 @@
 # Used locally and by CI.
 #
 #   scripts/build_all.sh               all modules
-#   scripts/build_all.sh esc simulator only these
+#   scripts/build_all.sh flight-controller simulator   only these
 #
 # Environment:
 #   BUILD_ROOT   build directory root (default: build/docker)
@@ -14,7 +14,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_ROOT="${BUILD_ROOT:-$REPO_ROOT/build/docker}"
 BUILD_TYPE="${BUILD_TYPE:-Debug}"
-MODULES=(common flight-controller esc simulator perception localization)
+MODULES=(common flight-controller simulator perception localization)
 if [[ $# -gt 0 ]]; then
     MODULES=("$@")
 fi

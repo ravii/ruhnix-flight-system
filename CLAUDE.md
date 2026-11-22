@@ -1,6 +1,6 @@
 # uav-flight
 
-Monorepo of independently built modules: `common/` (C protocol headers), `flight-controller/` and `esc/` (C++17 on FreeRTOS), `perception/` and `localization/` (C++17 on Linux), `simulator/` (C++17, host). Each module has its own CMakeLists.txt; there is no top-level build.
+Monorepo of independently built modules: `common/` (C protocol headers), `flight-controller/` (C++17 on FreeRTOS), `perception/` and `localization/` (C++17 on Linux), `simulator/` (C++17, host). Each module has its own CMakeLists.txt; there is no top-level build. ESCs are off-the-shelf (BLHeli_32 / AM32 …) driven by DShot from the flight controller; there is no ESC firmware in this repo.
 
 ## Formatting (required)
 
@@ -14,7 +14,7 @@ Code is edited on Windows (this checkout, VS Code navigation only); building, te
 
 ```bash
 scripts/wsl.sh scripts/build_all.sh           # from Windows: build + test in WSL on this checkout
-scripts/build_all.sh                          # inside WSL: all modules, or: scripts/build_all.sh esc simulator
+scripts/build_all.sh                          # inside WSL: all modules, or: scripts/build_all.sh flight-controller simulator
 scripts/format.sh --check
 scripts/docker.sh run scripts/build_all.sh    # same check in the CI image
 scripts/docker.sh build                       # if Docker Hub is blocked:
@@ -26,7 +26,7 @@ scripts/docker.sh build                       # if Docker Hub is blocked:
 ## Firmware rules
 
 - `core/` must not include FreeRTOS or hardware headers; it is driven by the simulator and unit tests.
-- Hardware access only through `fc::Board` / `esc::Board`. The control loop is paced by `Board::wait_imu()`, and time only comes from `Board::time_us()` (simulation time in SITL).
+- Hardware access only through `fc::Board`. The control loop is paced by `Board::wait_imu()`, and time only comes from `Board::time_us()` (simulation time in SITL).
 - No exceptions, no RTTI, no heap after the scheduler starts; no `std::vector`, `std::string`, `std::function`, `iostream` in firmware.
 - No side effects inside `configASSERT()`.
 - Protocol structs are packed: copy element-wise, never bind references or pointers to their members.

@@ -4,7 +4,7 @@
 
 | 依赖 | 路径 | 使用方 |
 |------|------|--------|
-| FreeRTOS-Kernel | `FreeRTOS-Kernel/` | flight-controller、esc |
+| FreeRTOS-Kernel | `FreeRTOS-Kernel/` | flight-controller |
 
 ```bash
 git submodule add https://github.com/FreeRTOS/FreeRTOS-Kernel.git third_party/FreeRTOS-Kernel

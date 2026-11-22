@@ -6,7 +6,7 @@
 # The toolchain itself is installed by setup_ubuntu.sh, which is also what
 # WSL2 / native Ubuntu machines run, so both environments stay identical:
 #   host        gcc/g++ 15, cmake, ninja, gdb           common, simulator, unit tests, SITL
-#   firmware    arm-none-eabi-gcc 14 + newlib/libstdc++ flight-controller, esc
+#   firmware    arm-none-eabi-gcc 14 + newlib/libstdc++ flight-controller
 #   companion   aarch64-linux-gnu-g++ + qemu-user        perception, localization (ARM64)
 #   debug       gdb-multiarch, openocd                  on-target firmware debugging
 #   format      clang-format (pinned, from PyPI)        must match scripts/format.sh

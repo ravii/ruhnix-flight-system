@@ -117,7 +117,7 @@ qemu-aarch64 -g 1234 build/loc-arm64/localization_tests &
 gdb-multiarch build/loc-arm64/localization_tests -ex "target remote :1234"
 ```
 
-### 固件（真实飞控板 / 电调板）
+### 固件（真实飞控板）
 
 调试器（ST-Link、J-Link）是 USB 设备，要先用 [usbipd-win](https://github.com/dorssel/usbipd-win) 把它挂到 WSL 里：
 

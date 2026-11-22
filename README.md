@@ -1,6 +1,6 @@
 # uav-flight
 
-一个自研多旋翼无人机项目，包含 **飞控**、**电调**、**感知**、**定位** 四个模块，外加一个用于调试的 **仿真器**。
+一个自研多旋翼无人机项目，包含 **飞控**、**感知**、**定位** 三个模块，外加一个用于调试的 **仿真器**。电调使用成品（BLHeli_32 / AM32 等），由飞控通过 DShot 驱动，本仓库不包含电调固件。
 
 每个模块都是**独立编译、独立部署**的工程，可以运行在不同的板子上。它们放在同一个仓库里，共享通信协议和消息定义，这样跨模块的接口改动可以在一次提交里完成。
 
@@ -9,7 +9,6 @@
 | 模块 | 目录 | 运行平台 | 操作系统 | 语言 | 工具链 |
 |------|------|----------|----------|------|--------|
 | 飞控 Flight Controller | [flight-controller/](flight-controller/) | MCU (Cortex-M4F/M7) | FreeRTOS | C++17 | `arm-none-eabi-g++` |
-| 电调 ESC | [esc/](esc/) | MCU (Cortex-M4F) | FreeRTOS | C++17 | `arm-none-eabi-g++` |
 | 感知 Perception | [perception/](perception/) | 机载计算机 (ARM64) | Linux | C++17 | `aarch64-linux-gnu-g++` |
 | 定位 Localization | [localization/](localization/) | 机载计算机 (ARM64) | Linux | C++17 | `aarch64-linux-gnu-g++` |
 | 仿真器 Simulator | [simulator/](simulator/) | 开发电脑 | Linux / Windows | C++17 | 主机编译器 |
@@ -26,7 +25,6 @@ uav-flight/
 │   ├── bsp/              #   硬件抽象 fc::Board；sim/ 是仿真板，其他子目录是真实板子
 │   ├── config/           #   FreeRTOSConfig.h
 │   └── tests/            #   主机端单元测试
-├── esc/                  # 电调固件（FreeRTOS），布局同飞控
 ├── perception/           # 感知应用（Linux）
 ├── localization/         # 定位应用（Linux）
 ├── simulator/            # 仿真器：动力学/传感器模型接口、锁步调度
@@ -70,7 +68,7 @@ cmake --build build/fc-host
 ctest --test-dir build/fc-host --output-on-failure
 ```
 
-把 `flight-controller` 换成 `common`、`esc`、`simulator`、`perception` 或 `localization` 即可构建其他模块。
+把 `flight-controller` 换成 `common`、`simulator`、`perception` 或 `localization` 即可构建其他模块。
 
 ### 交叉编译固件（FreeRTOS）
 
@@ -138,7 +136,7 @@ scripts/format.sh --check     # 只检查不修改（CI 用）
 
 - [ ] 通信协议 v1 定稿
 - [ ] 飞控：IMU 驱动 + 姿态解算 + 角速度环
-- [ ] 电调：FOC 电流环 + SVPWM
+- [ ] 飞控：DShot 电机输出（驱动成品电调）
 - [ ] 仿真器：四旋翼动力学模型 + 进程内算法闭环
 - [ ] SITL：FreeRTOS POSIX port + UDP SimBackend
 - [ ] 定位：IMU + 视觉/GNSS 融合
