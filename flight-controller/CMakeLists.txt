@@ -29,6 +29,8 @@ uav_use_common()
 
 # ---- core: platform-independent algorithms (host-testable) ----------------
 add_library(fc_core STATIC
+    core/src/esc/dshot.cpp
+    core/src/esc/esc_output.cpp
     core/src/flight_control.cpp
     core/src/mixer.cpp
     core/src/pid.cpp)
@@ -81,6 +83,11 @@ else()
         add_executable(fc_test_core tests/test_core.cpp)
         target_link_libraries(fc_test_core PRIVATE fc_core)
         add_test(NAME fc.core COMMAND fc_test_core)
+
+        add_executable(fc_test_esc tests/test_esc.cpp)
+        target_include_directories(fc_test_esc PRIVATE config)  # esc_config.hpp
+        target_link_libraries(fc_test_esc PRIVATE fc_core)
+        add_test(NAME fc.esc COMMAND fc_test_esc)
 
         add_executable(fc_test_sim_board tests/test_sim_board.cpp)
         target_link_libraries(fc_test_sim_board PRIVATE fc_bsp_sim)

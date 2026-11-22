@@ -26,6 +26,7 @@ scripts/docker.sh build                       # if Docker Hub is blocked:
 ## Firmware rules
 
 - `core/` must not include FreeRTOS or hardware headers; it is driven by the simulator and unit tests.
+- Motor output stays protocol-agnostic: control code produces `ActuatorOutputs` in [0, 1]; ESC protocol, wiring order and encoding live in `config/esc_config.hpp` + `core/.../esc/` (`EscOutput`), and boards only implement the waveform (`fc::EscBus`).
 - Hardware access only through `fc::Board`. The control loop is paced by `Board::wait_imu()`, and time only comes from `Board::time_us()` (simulation time in SITL).
 - No exceptions, no RTTI, no heap after the scheduler starts; no `std::vector`, `std::string`, `std::function`, `iostream` in firmware.
 - No side effects inside `configASSERT()`.

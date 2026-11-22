@@ -33,7 +33,7 @@
 | 链路 | 物理层 | 协议 | 定义位置 |
 |------|--------|------|----------|
 | 飞控 ↔ 机载计算机 | UART（≥ 921600 bps） | `common/protocol` 帧 | [frame.h](../common/protocol/include/uav/protocol/frame.h) |
-| 飞控 → 电调 | 定时器 + DMA 输出 | DShot（成品电调） | 飞控 BSP 的 `write_motors()` |
+| 飞控 → 电调 | 定时器 + DMA 输出 | DShot / PWM（成品电调），在 `config/esc_config.hpp` 中选择 | 协议层 [esc_output.hpp](../flight-controller/core/include/fc/esc/esc_output.hpp)，传输层 [esc_bus.hpp](../flight-controller/bsp/include/fc/bsp/esc_bus.hpp) |
 | 感知 ↔ 定位 | 同机进程间通信 | 待定（共享内存 / Unix socket） | — |
 | 模拟器 ↔ 飞控 | 进程内 / UDP / UART | `UAV_MSG_SIM_SENSORS`、`UAV_MSG_SIM_ACTUATORS`，锁步 | [messages.h](../common/protocol/include/uav/protocol/messages.h) |
 

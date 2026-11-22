@@ -27,7 +27,7 @@ bsp/
 
 1. `cp -r bsp/_template bsp/<board>`
 2. 把芯片厂商提供的启动文件、链接脚本、HAL 驱动放进 `vendor/`（启动文件里必须调用 `__libc_init_array`，这样全局对象的构造函数才会执行）
-3. 在 `board.cpp` 里实现各个 TODO
+3. 在 `board.cpp` 里实现各个 TODO。电机输出只需要实现 `EscBus`（按协议产生波形），协议编码由 `fc::esc::EscOutput` 完成，协议选择在 [config/esc_config.hpp](../config/esc_config.hpp)
 4. 按芯片修改 `board.cmake` 里的 `-mcpu` 等参数和 `FC_FREERTOS_PORT`
 
 | 内核 | `FC_FREERTOS_PORT` |

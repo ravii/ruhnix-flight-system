@@ -136,7 +136,7 @@ scripts/format.sh --check     # 只检查不修改（CI 用）
 
 - [ ] 通信协议 v1 定稿
 - [ ] 飞控：IMU 驱动 + 姿态解算 + 角速度环
-- [ ] 飞控：DShot 电机输出（驱动成品电调）
+- [ ] 飞控：电机输出（协议层已完成；板级 `EscBus` 的 DShot 定时器/DMA 驱动待实现）
 - [ ] 仿真器：四旋翼动力学模型 + 进程内算法闭环
 - [ ] SITL：FreeRTOS POSIX port + UDP SimBackend
 - [ ] 定位：IMU + 视觉/GNSS 融合

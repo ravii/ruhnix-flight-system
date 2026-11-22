@@ -7,15 +7,39 @@
 ```
 app/        FreeRTOS 任务（ControlTask、TelemetryTask）、运行时支持（new/delete → FreeRTOS 堆）
   │
-  ├── core/        纯算法：FlightControl、Pid、QuadXMixer（不包含 FreeRTOS 或硬件头文件）
+  ├── core/        纯算法：FlightControl、Pid、QuadXMixer、esc/ 电调协议层（不包含 FreeRTOS 或硬件头文件）
   └── bsp/
       ├── include/fc/bsp/board.hpp   硬件抽象接口 fc::Board
+      ├── include/fc/bsp/esc_bus.hpp 电调信号传输接口 fc::EscBus
       ├── sim/                       仿真板：SimBoard + SimBackend
       ├── _template/                 新板子模板
       └── <board>/                   真实硬件
-config/     FreeRTOSConfig.h
+config/     FreeRTOSConfig.h、esc_config.hpp（电调协议和电机接线）
 tests/      主机端单元测试
 ```
+
+## 电机输出（成品电调）
+
+```
+FlightControl ──ActuatorOutputs（每个电机 0~1，与协议无关）──▶ Board::write_motors()
+                                                                  │ 真实板子
+                                                                  ▼
+                 core/esc：EscOutput  电机顺序映射 + 协议编码（DShot 帧 / CRC、PWM 脉宽）
+                                                                  │ EscFrame（原始值）
+                                                                  ▼
+                 bsp/<board>：EscBus  定时器 + DMA 产生波形
+```
+
+| 要改的东西 | 改哪里 |
+|------------|--------|
+| 换电调、换协议（PWM / OneShot125 / DShot150/300/600）、电机接线顺序 | [config/esc_config.hpp](config/esc_config.hpp) |
+| 换飞控板 | 新板子实现 `fc::EscBus`（只负责产生波形） |
+| 飞控算法 | 不用改，永远只输出 0~1 |
+
+- 上锁时所有电机发"停转"（DShot 0 / 最小脉宽）；解锁后油门 0 对应 DShot 48，也就是怠速，电机会转
+- DShot 特殊命令（蜂鸣找机、改转向等）用 `EscOutput::send_command()`，只能在上锁时发，设置类命令要连续发 `dshot::kCommandRepeat` 次
+- 双向 DShot（读回 eRPM，用于转速陷波滤波）：接口已经预留（`EscBus::read_erpm()` / `EscOutput::read_erpm()`），板级实现之后再做
+- 仿真板 `SimBoard` 直接把 0~1 发给模拟器，不经过协议层
 
 ## 为仿真预留的设计
 
