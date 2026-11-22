@@ -1,0 +1,13 @@
+  recording.mcap
+        |
+        v
+  +---------------------+   recorded sensor topics   +------------------------+
+  | rfs_replay          | -------------------------> | perception,            |
+  | speed: 1x/max/step  |   /clock (recorded time)   | localization, app      |
+  | topic filter        |                            | (algorithm under test) |
+  +---------------------+                            +------------------------+
+                                                                 |
+                                                                 | new results
+                                                                 v
+                                                     rfs_record --> new.mcap
+                                                     diff against the original

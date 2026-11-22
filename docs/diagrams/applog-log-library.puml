@@ -1,0 +1,20 @@
+@startuml
+' rfs-diagram: applog-log-library
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+rectangle "process: perception / localization / app" {
+  component "algorithm code" as ALG
+  component "bus client" as BC
+  component "rfs::log library\nsinks: console, text file, bus" as LOG
+}
+queue "message bus" as BUS
+file "<process>.log" as TXT
+
+ALG --> BC : publish, subscribe
+ALG --> LOG : RFS_LOG_INFO(...): text log
+ALG --> LOG : plot API: scalar, pose, path
+BC --> BUS
+LOG --> TXT : text file sink
+LOG --> BUS : bus sink: /log/text, /log/plot/*
+@enduml

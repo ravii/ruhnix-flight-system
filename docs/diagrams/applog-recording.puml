@@ -1,0 +1,17 @@
+@startuml
+' rfs-diagram: applog-recording
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+left to right direction
+queue "bus topics\n/fc/*\n/localization/pose\n/perception/obstacles\n/app/*\n/log/text, /log/plot/*\n/camera/depth (option)" as TOPICS
+component "rfs_record\nsubscribe: all or a filter\ntimestamp: receive time and message header time\nMCAP writer: chunked, zstd" as REC
+folder "run_<date>_<time>/" {
+  file "recording.mcap\n所有通道：传感器、结果、日志、曲线" as MCAP
+  file "text/<进程>.log\n文本日志，便于 grep" as LOGS
+}
+
+TOPICS --> REC
+REC --> MCAP
+REC --> LOGS
+@enduml

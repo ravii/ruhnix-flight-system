@@ -1,0 +1,45 @@
+@startuml
+' rfs-diagram: architecture-deployment
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+agent "camera / depth" as CAM
+agent "GNSS / VIO" as GNSS
+agent "IMU" as IMU
+agent "RC receiver" as RC
+
+rectangle "机载计算机（ARM64 Linux）" {
+  component "perception" as PER
+  component "localization" as LOC
+}
+rectangle "飞控 MCU（FreeRTOS）" {
+  component "flight controller\ncontrol task @ 1 kHz\nFlightControl -> mixer -> EscOutput -> EscBus" as FC
+}
+agent "motor 0" as M0
+agent "motor 1" as M1
+agent "motor 2" as M2
+agent "motor 3" as M3
+
+rectangle "成品电调" {
+  component "ESC 0" as E0
+  component "ESC 1" as E1
+  component "ESC 2" as E2
+  component "ESC 3" as E3
+}
+
+CAM --> PER
+GNSS --> LOC
+PER -right-> LOC : obstacles
+LOC --> FC : UART: pose estimate, setpoints
+FC --> LOC : UART: IMU, attitude, heartbeat
+IMU --> FC
+RC --> FC
+FC --> E0 : DShot
+FC --> E1 : DShot
+FC --> E2 : DShot
+FC --> E3 : DShot
+E0 --> M0
+E1 --> M1
+E2 --> M2
+E3 --> M3
+@enduml

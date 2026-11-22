@@ -1,0 +1,27 @@
+   camera / depth                     GNSS / VIO
+         |                                |
+         v                                v
+   +------------+     obstacles     +--------------+
+   | perception | ----------------> | localization |          机载计算机（ARM64 Linux）
+   +------------+                   +--------------+
+                                       |        ^
+             pose estimate,            |        |    IMU, attitude,
+             setpoints                 |  UART  |    heartbeat
+                                       v        |
+   IMU -----------+           +---------------------------+
+                  +---------> |     flight controller     |    飞控 MCU（FreeRTOS）
+   RC receiver ---+           |  control task @ 1 kHz     |
+                              |  FlightControl -> mixer   |
+                              |  -> EscOutput -> EscBus   |
+                              +---------------------------+
+                                            |
+                                            | DShot
+          +----------------+----------------+----------------+
+          |                |                |                |
+          v                v                v                v
+      +-------+        +-------+        +-------+        +-------+
+      | ESC 0 |        | ESC 1 |        | ESC 2 |        | ESC 3 |      成品电调
+      +-------+        +-------+        +-------+        +-------+
+          |                |                |                |
+          v                v                v                v
+       motor 0          motor 1          motor 2          motor 3

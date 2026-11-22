@@ -2,6 +2,7 @@
 
 ## 硬件与模块部署
 
+<!-- diagram: architecture-deployment -->
 ```
    camera / depth                     GNSS / VIO
          |                                |
@@ -42,7 +43,7 @@
 ## 通信
 
 | 链路 | 物理层 | 协议 | 定义位置 |
-|------|--------|------|----------|
+|---|---|---|---|
 | 飞控 ↔ 机载计算机 | UART（≥ 921600 bps） | `rfs::common` 帧 | [frame.hpp](../common/include/rfs/common/frame.hpp) |
 | 飞控 → 电调 | 定时器 + DMA 输出 | DShot / PWM（成品电调），在 `config/esc_config.hpp` 中选择 | 协议层 [esc_output.hpp](../flight-controller/core/include/rfs/fc/esc/esc_output.hpp)，传输层 [esc_bus.hpp](../flight-controller/bsp/include/rfs/fc/bsp/esc_bus.hpp) |
 | 感知 ↔ 定位 | 同机进程间通信 | 待定（共享内存 / Unix socket） | — |
@@ -52,6 +53,7 @@
 
 飞控软件分三层，每一层都能单独接到模拟器上：
 
+<!-- diagram: architecture-sim-layers -->
 ```
                     +--------------------------------+
                     | app/  ControlTask (FreeRTOS)   |
@@ -83,7 +85,7 @@
 关键约定：
 
 - **控制环由数据驱动，不由定时器驱动**：控制任务等待 IMU 数据。模拟器每发一帧传感器数据，飞控就走一步并回复电机输出，模拟器收到回复后才推进物理模型。这就是锁步，不需要改 FreeRTOS 的 tick。
-- **时间只来自 `Board::time_us()`**：仿真时它就是仿真时间，所以每次运行的结果都一样。
+- **时间只来自** `Board::time_us()`：仿真时它就是仿真时间，所以每次运行的结果都一样。
 - **SITL 和 HITL 共用同一套消息**：模拟器这边只需要换 `FcLink` 的实现。
 
 详见 [simulator/README.md](../simulator/README.md)。

@@ -10,6 +10,6 @@
 | `format.sh` | 任意 | clang-format 格式化 / `--check` 检查 |
 | `wsl.sh` | Windows（Git Bash） | 备选方案：在 WSL 里对 Windows 盘上的这份代码执行命令，例如 `scripts/wsl.sh scripts/build_all.sh simulator`；不带参数时进入 WSL shell。日常开发直接在 WSL 的 `~/ruhnix-flight-system` 里进行，用不到它 |
 | `docker.sh` | WSL / Windows | 构建 CI 镜像、在容器里执行命令 |
-| `confluence_sync.py` | 任意（需要 Python + `markdown` 包） | 设计文档以 Confluence 为准：`draft` 发布新页面，在 Confluence 上评审修改，代码实现后用 `pull` 把页面存回仓库（幂等）；`cleanup` 去掉页面里不该有的内容。页面和文件的对应关系在 `docs/confluence_pages.json`。凭据放在本机的 `~/.confluence/confluence.env`，**不要放进仓库**，格式见脚本开头的注释 |
+| `confluence_sync.py` | 任意（需要 Python + `markdown` 包） | 设计文档以 Confluence 为准：`draft` 发布新页面，在 Confluence 上评审修改，代码实现后用 `pull` 把页面存回仓库（幂等）；`cleanup` 去掉页面里不该有的内容；`diagrams` 把页面上的 ASCII 图换成 PlantUML 插件的图（仓库 md 仍用 ASCII，两者通过 `docs/diagrams/<名字>.puml` 和 `.txt` 对应，发布前用本地 plantuml 检查语法）。页面和文件的对应关系在 `docs/confluence_pages.json`。凭据放在本机的 `~/.confluence/confluence.env`，**不要放进仓库**，格式见脚本开头的注释 |
 | `claude-format-hook.sh` | Claude Code hook | Claude 改完 C/C++ 文件后自动格式化 |
 | `git-hooks/pre-commit` | git | 提交前检查格式（`git config core.hooksPath scripts/git-hooks`） |

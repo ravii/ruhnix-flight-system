@@ -22,6 +22,7 @@ tests/      主机端单元测试
 
 ## 电机输出（成品电调）
 
+<!-- diagram: fc-motor-output -->
 ```
    +----------------------------+
    |  FlightControl::update()   |
@@ -55,7 +56,7 @@ tests/      主机端单元测试
 ```
 
 | 要改的东西 | 改哪里 |
-|------------|--------|
+|---|---|
 | 换电调、换协议（PWM / OneShot125 / DShot150/300/600）、电机接线顺序 | [config/esc_config.hpp](config/esc_config.hpp) |
 | 换飞控板 | 新板子实现 `rfs::fc::EscBus`（只负责产生波形） |
 | 飞控算法 | 不用改，永远只输出 0~1 |
@@ -111,7 +112,7 @@ scripts/build.sh --fw stm32f4
 ## 任务
 
 | 任务 | 触发方式 | 优先级 | 说明 |
-|------|----------|--------|------|
+|---|---|---|---|
 | `control` | `Board::wait_imu()`（约 1 kHz） | 最高 | IMU + 遥控 → `FlightControl::update()` → 电机；IMU 超时就关电机 |
 | `telemetry` | 100 ms | 低 | 向机载计算机发送心跳 |
 
@@ -127,6 +128,7 @@ scripts/build.sh --fw stm32f4
 
 `bsp/sitl` 复用 `SimBoard`，传输层是 UDP（[udp_sim_backend.hpp](bsp/sitl/udp_sim_backend.hpp)），每个 UDP 包是一个 `rfs::common` 帧。POSIX port 下每个任务是一个 pthread，任务阻塞在系统调用里时 FreeRTOS 仍然认为它在运行，会饿死低优先级任务，所以控制任务不直接 `recv()`：
 
+<!-- diagram: fc-sitl-wakeup -->
 ```
    rfs_sim --udp                     flight_controller (SITL)
    +-----------+   SIM_SENSORS   +----------------------------------+

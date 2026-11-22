@@ -1,0 +1,23 @@
+                    +--------------------------------+
+                    | app/  ControlTask (FreeRTOS)   |
+                    |       blocks on wait_imu()     |
+                    +--------------------------------+
+                          |                     |
+                update()  |                     |  wait_imu() / write_motors()
+                          v                     v
+   +--------------------------+     +-----------------------+
+   | core/  FlightControl     |     |    rfs::fc::Board     |
+   |        pure function     |     +-----------------------+
+   +--------------------------+          |             |
+                ^                        v             v
+                |              +-------------+   +--------------+
+                |              | bsp/<board> |   | bsp/sim      |
+                |              | SPI, timers |   | SimBoard     |
+                |              | EscBus      |   | + SimBackend |
+                |              +-------------+   +--------------+
+                |                                       ^
+                |                                       |
+   +--------------------------+         +--------------------------------+
+   | simulator, in-process    |         | simulator over UDP (SITL)      |
+   | (1) algorithm loop       |         | or serial (HITL)   (2) (3)     |
+   +--------------------------+         +--------------------------------+

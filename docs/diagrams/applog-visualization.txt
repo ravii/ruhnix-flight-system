@@ -1,0 +1,3 @@
+  recording.mcap --+--> Foxglove / Lichtblick   3D trajectory, obstacles, planned path; plots; logs
+                   +--> PlotJuggler             2D curves
+  rfs_sim CSV -------> PlotJuggler              works today, no code needed

@@ -4,6 +4,7 @@
 
 ## 锁步（lockstep）
 
+<!-- diagram: sim-lockstep -->
 ```
    +--------------+     truth     +-------------+
    | VehicleModel | ------------> | SensorModel |
@@ -27,7 +28,7 @@
 ## 接口
 
 | 接口 | 文件 | 职责 | 实现 |
-|------|------|------|------|
+|---|---|---|---|
 | `VehicleModel` | [vehicle_model.hpp](include/rfs/sim/vehicle_model.hpp) | 电机指令 → 刚体状态 | `QuadrotorModel`（**已实现**）；Gazebo 等外部引擎桥接（计划） |
 | `SensorModel` | [sensor_model.hpp](include/rfs/sim/sensor_model.hpp) | 真值 → 带噪声、零偏、延迟的传感器读数 | `ImuSensorModel`（**已实现**）；气压计/磁力计/GNSS（计划） |
 | `FcLink` | [fc_link.hpp](include/rfs/sim/fc_link.hpp) | 一次"发传感器、收电机输出" | `InProcessLink`、`UdpLink`（**已实现**），其余见下表 |
@@ -75,7 +76,7 @@ build/host/simulator/rfs_sim --udp 127.0.0.1:14560 > trace.csv   # 驱动 SITL �
 ## 三种调试方式
 
 | 方式 | `FcLink` 实现 | 飞控侧 | 用途 |
-|------|---------------|--------|------|
+|---|---|---|---|
 | 算法闭环 | `InProcessLink`（已实现）：在进程内直接调用 `rfs::fc::FlightControl::update()` | 只有 `flight-controller/core`，不带 RTOS | 调算法、调参数、在 CI 里做回归测试。最快，可以单步调试 |
 | SITL | `UdpLink`（已实现，`rfs_sim --udp`） | 完整固件 + FreeRTOS POSIX port + `bsp/sitl`（`SimBoard` + UDP 版的 `SimBackend`），`scripts/sitl.sh` | 验证任务调度、通信协议，和感知、定位模块联调 |
 | HITL | `SerialLink` | 真实飞控板 + `bsp/sim`（串口版的 `SimBackend`） | 上真机之前的最后一道验证 |

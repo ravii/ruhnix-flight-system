@@ -1,0 +1,20 @@
+@startuml
+' rfs-diagram: architecture-sim-layers
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+component "app/  ControlTask (FreeRTOS)\nblocks on wait_imu()" as TASK
+component "core/  FlightControl\npure function" as CORE
+component "rfs::fc::Board" as BOARD
+component "bsp/~<board>\nSPI, timers, EscBus" as BSP
+component "bsp/sim\nSimBoard + SimBackend" as SIMB
+component "simulator, in-process\n(1) algorithm loop" as INPROC
+component "simulator over UDP (SITL)\nor serial (HITL)\n(2) (3)" as REMOTE
+
+TASK --> CORE : update()
+TASK --> BOARD : wait_imu() / write_motors()
+BOARD --> BSP
+BOARD --> SIMB
+INPROC -up-> CORE
+REMOTE -up-> SIMB
+@enduml

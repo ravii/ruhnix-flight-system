@@ -1,0 +1,9 @@
+   rfs_sim --udp                     flight_controller (SITL)
+   +-----------+   SIM_SENSORS   +----------------------------------+
+   | UdpLink   | --------------> | IDLE task: poll() on the socket  |  相当于 MCU 上的 WFI
+   |           |                 |   |  datagram arrived            |
+   |           |                 |   v  xTaskNotifyGive()           |  相当于 IMU 中断
+   |           |                 | control task: wait_imu() returns |
+   |           |  SIM_ACTUATORS  |   FlightControl::update()        |
+   |           | <-------------- |   write_motors()                 |
+   +-----------+                 +----------------------------------+

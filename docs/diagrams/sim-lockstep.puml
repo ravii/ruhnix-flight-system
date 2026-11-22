@@ -1,0 +1,16 @@
+@startuml
+' rfs-diagram: sim-lockstep
+skinparam shadowing false
+participant VehicleModel
+participant SensorModel
+participant FcLink
+participant "flight controller\n(under test)" as FC
+
+loop every physics step
+  VehicleModel -> SensorModel : truth
+  SensorModel -> FcLink : (1) SIM_SENSORS
+  FcLink -> FC : (2) send, wait
+  FC --> FcLink : reply
+  FcLink -> VehicleModel : SIM_ACTUATORS\n(3) step(actuators, dt)
+end
+@enduml

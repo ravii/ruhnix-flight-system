@@ -10,6 +10,8 @@
     python scripts/confluence_sync.py cleanup [--dry-run]
         remove what pages must not hold (the old sync banner, links to and URLs of
         the code repository) in place, keeping every other edit made on the page.
+    python scripts/confluence_sync.py diagrams [--dry-run]
+        replace the ASCII diagrams on the pages with PlantUML diagrams, in place.
     python scripts/confluence_sync.py pull [PATH ...] [--dry-run]
         write the reviewed pages back to the repo as Markdown. Idempotent: a file
         whose content already matches its page is left untouched. Without PATH,
@@ -21,6 +23,16 @@ There is deliberately no command that overwrites an existing page from the repo.
 Pages are for readers: no notes about tooling, and no references into the code
 hosting (links to repo files become code-formatted paths, the clone URL becomes
 a placeholder). Publishing refuses any page that mentions github.com.
+
+Diagrams: pages draw them with the "PlantUML Diagram" app; the repo Markdown
+keeps ASCII art. Each diagram is docs/diagrams/<id>.puml (its first comment
+line is "' rfs-diagram: <id>") plus <id>.txt, its ASCII version. In the
+Markdown, "<!-- diagram: <id> -->" right before a code block marks that block
+as the ASCII version of the diagram. Publishing puts the PlantUML diagram on
+the page instead and refuses pages that still hold ASCII diagrams; pull turns
+it back into the ASCII block, and stops if a diagram was changed on the page
+(update the .puml and redraw the .txt, then pull again). Diagrams are syntax
+checked with the local plantuml before they are published.
 
 docs/confluence_pages.json maps repo paths to page ids, so renaming a page in
 Confluence does not break anything. It holds no credentials.
@@ -40,6 +52,7 @@ elsewhere: pip install markdown).
 
 import argparse
 import base64
+import datetime
 import difflib
 import hashlib
 import html
@@ -48,13 +61,17 @@ import json
 import os
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 import xml.etree.ElementTree as ET
+import zlib
 
 import markdown
 
@@ -90,6 +107,19 @@ CODE_LANGUAGES = {'bash': 'bash', 'sh': 'bash', 'powershell': 'powershell', 'cpp
                   'c': 'cpp', 'python': 'python', 'yaml': 'yaml'}
 
 SYNC_PREFIX = 'sync:'
+
+# Diagrams (see the module docstring).
+DIAGRAM_SUBDIRS = ('docs/diagrams', 'build/docs-drafts/diagrams')  # earlier ones win
+DIAGRAM_MARKER = '<!-- diagram: {} -->'
+DIAGRAM_ID_RE = re.compile(r"^' rfs-diagram: ([a-z0-9-]+)$", re.M)
+# The "PlantUML Diagram" Forge app (insert one by hand to see the format it stores).
+PLANTUML_APP = ('85516c62-101e-41a9-b155-0be6a906042a/2c435852-96a8-44fb-a8fc-cf5fa3fb4040'
+                '/static/plantumlcloud')
+PLANTUML_TITLE = 'PlantUML Diagram'
+PLANTUML_SAMPLE = '@startuml\nA --> B : test\n@enduml'  # the test diagram inserted to learn the format
+ASCII_BOX_RE = re.compile(r'\+-{2,}')
+ASCII_ARROW_RE = re.compile(r'-->|<--')
+TREE_RE = re.compile(r'[├└]──')
 CODE_MACRO = 'ac:name="code"'
 
 
@@ -124,6 +154,224 @@ def code_macro(match):
             '</ac:structured-macro>')
 
 
+class Diagram:
+    def __init__(self, ident, source, ascii_art):
+        self.ident = ident
+        self.source = source
+        self.ascii = ascii_art
+
+
+_diagram_cache = None
+
+
+def known_diagrams():
+    """id -> Diagram from DIAGRAM_SUBDIRS. Exits on a malformed pair."""
+    global _diagram_cache
+    if _diagram_cache is not None:
+        return _diagram_cache
+    found = {}
+    for sub in DIAGRAM_SUBDIRS:
+        folder = REPO_ROOT / sub
+        for puml in sorted(folder.glob('*.puml')) if folder.is_dir() else []:
+            if puml.stem in found:
+                continue
+            source = puml.read_text(encoding='utf-8').rstrip('\n')
+            match = DIAGRAM_ID_RE.search(source)
+            if not match or match.group(1) != puml.stem:
+                sys.exit(f"{puml}: needs the line \"' rfs-diagram: {puml.stem}\"")
+            art = puml.with_suffix('.txt')
+            if not art.is_file():
+                sys.exit(f'{puml}: missing {art.name}, its ASCII version for the repo docs')
+            found[puml.stem] = Diagram(puml.stem, source, art.read_text(encoding='utf-8').rstrip('\n'))
+    _diagram_cache = found
+    return found
+
+
+def is_ascii_diagram(code):
+    """Box art or arrows; directory trees (├──) may stay text."""
+    return bool(ASCII_BOX_RE.search(code) or (ASCII_ARROW_RE.search(code) and not TREE_RE.search(code)))
+
+
+def plantuml_encode(source):
+    """The app stores the source deflated (raw, level 9) and base64-encoded."""
+    deflate = zlib.compressobj(9, zlib.DEFLATED, -15)
+    return base64.b64encode(deflate.compress(source.encode('utf-8')) + deflate.flush()).decode('ascii')
+
+
+def plantuml_decode(data, compressed=True):
+    if not compressed:
+        return data
+    return zlib.decompress(base64.b64decode(data), -15).decode('utf-8')
+
+
+class DiagramContext:
+    """What the editor records with an inserted diagram: the page and the site it lives in."""
+
+    def __init__(self, page_id='0', page_version=1, space_key='', space_id='', cloud_id='',
+                 account_id='', context_id=''):
+        self.page_id = str(page_id)
+        self.page_version = page_version
+        self.space_key = space_key
+        self.space_id = str(space_id)
+        self.cloud_id = cloud_id
+        self.account_id = account_id
+        self.context_id = context_id
+
+    def for_page(self, page_id, page_version):
+        return DiagramContext(page_id, page_version, self.space_key, self.space_id, self.cloud_id,
+                              self.account_id, self.context_id)
+
+
+def adf_param(key, value, kind=None):
+    kind_attr = f' type="{kind}"' if kind else ''
+    return f'<ac:adf-parameter key="{key}"{kind_attr}>{value}</ac:adf-parameter>'
+
+
+def plantuml_macro(diagram, name, ctx):
+    """A "PlantUML Diagram" app macro, in the same shape the editor stores."""
+    def esc(text):
+        return html.escape(str(text), quote=False)
+
+    local_id = uuid.uuid5(uuid.NAMESPACE_URL, f'rfs/{ctx.page_id}/{diagram.ident}')
+    guest_id = uuid.uuid5(uuid.NAMESPACE_URL, f'rfs/{ctx.page_id}/{diagram.ident}/diagram')
+    data = plantuml_encode(diagram.source)
+    now = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+    context = adf_param('embedded-macro-context', ''.join([
+        adf_param('extension-data', ''.join([
+            adf_param('type', 'macro'),
+            adf_param('content', adf_param('id', esc(ctx.page_id)) + adf_param('type', 'page') +
+                      adf_param('version', ctx.page_version, 'integer')),
+            adf_param('space', adf_param('key', esc(ctx.space_key)) + adf_param('id', esc(ctx.space_id))),
+        ])),
+        adf_param('context-ids', f'<ac:adf-parameter-value>{esc(ctx.context_id)}</ac:adf-parameter-value>'),
+        adf_param('account-id', esc(ctx.account_id)),
+        adf_param('cloud-id', esc(ctx.cloud_id)),
+    ]))
+    guest = adf_param('guest-params', ''.join([
+        adf_param('id', guest_id),
+        adf_param('name', esc(name)),
+        adf_param('data', data),
+        adf_param('revision', 1, 'integer'),
+        adf_param('compressed', 'true', 'boolean'),
+        adf_param('history', '<ac:adf-parameter-value>' + adf_param('data', data) +
+                  adf_param('revision', 1, 'integer') + adf_param('created-at', now) +
+                  '</ac:adf-parameter-value>'),
+        adf_param('draft', 'false', 'boolean'),
+    ]))
+    params = ''.join([
+        adf_param('local-id', local_id),
+        adf_param('extension-id', f'ari:cloud:ecosystem::extension/{PLANTUML_APP}'),
+        adf_param('extension-title', PLANTUML_TITLE),
+        adf_param('layout', 'extension'),
+        adf_param('forge-environment', 'PRODUCTION'),
+        adf_param('render', 'default'),
+        context,
+        guest,
+    ])
+    node = ('<ac:adf-node type="extension">'
+            f'<ac:adf-attribute key="extension-key">{PLANTUML_APP}</ac:adf-attribute>'
+            '<ac:adf-attribute key="extension-type">com.atlassian.ecosystem</ac:adf-attribute>'
+            f'<ac:adf-attribute key="parameters">{params}</ac:adf-attribute>'
+            f'<ac:adf-attribute key="text">{PLANTUML_TITLE}</ac:adf-attribute>'
+            '<ac:adf-attribute key="layout">default</ac:adf-attribute>'
+            f'<ac:adf-attribute key="local-id">{local_id}</ac:adf-attribute>'
+            '</ac:adf-node>')
+    return f'<ac:adf-extension>{node}<ac:adf-fallback>{node}</ac:adf-fallback></ac:adf-extension>'
+
+
+ADF_EXTENSION_RE = re.compile(r'<ac:adf-extension>.*?</ac:adf-extension>', flags=re.S)
+CODE_MACRO_RE = re.compile(r'<ac:structured-macro\b[^>]*\bac:name="code"[^>]*>.*?</ac:structured-macro>',
+                           flags=re.S)
+
+
+def macro_code(macro_xml):
+    """The text of a code macro (CDATA sections joined)."""
+    body = re.search(r'<ac:plain-text-body>(.*?)</ac:plain-text-body>', macro_xml, flags=re.S)
+    if not body:
+        return ''
+    return ''.join(re.findall(r'<!\[CDATA\[(.*?)\]\]>', body.group(1), flags=re.S))
+
+
+def macro_language(macro_xml):
+    match = re.search(r'<ac:parameter ac:name="language">([^<]*)</ac:parameter>', macro_xml)
+    return match.group(1) if match else 'none'
+
+
+def heading_before(storage, pos):
+    """Text of the last heading before pos: the diagram's name in the app."""
+    found = None
+    for match in re.finditer(r'<h[1-6][^>]*>(.*?)</h[1-6]>', storage[:pos], flags=re.S):
+        found = match
+    return ' '.join(html.unescape(re.sub(r'<[^>]+>', '', found.group(1))).split()) if found else ''
+
+
+def extension_fields(extension_xml):
+    """(extension key, guest-params dict) of an <ac:adf-extension> element tree."""
+    node = extension_xml.find(AC + 'adf-node')
+    if node is None:
+        return '', {}
+    attrs = {a.get('key'): a for a in node.findall(AC + 'adf-attribute')}
+    key = (attrs['extension-key'].text or '') if 'extension-key' in attrs else ''
+    guest = {}
+    params = attrs.get('parameters')
+    if params is not None:
+        for param in params.findall(AC + 'adf-parameter'):
+            if param.get('key') == 'guest-params':
+                guest = {g.get('key'): g for g in param.findall(AC + 'adf-parameter')}
+    return key, guest
+
+
+def extension_source(extension_xml):
+    """PlantUML source of a "PlantUML Diagram" macro, or None for other macros."""
+    key, guest = extension_fields(extension_xml)
+    if key != PLANTUML_APP or 'data' not in guest:
+        return None
+    compressed = (guest['compressed'].text or '') == 'true' if 'compressed' in guest else False
+    return plantuml_decode(guest['data'].text or '', compressed).rstrip('\n')
+
+
+def diagram_context(storages):
+    """Site context copied from a diagram someone inserted with the editor."""
+    for storage in storages:
+        for match in ADF_EXTENSION_RE.finditer(storage):
+            if PLANTUML_APP not in match.group(0):
+                continue
+            el = parse_storage(match.group(0))[0]
+            values = {}
+            for param in el.iter(AC + 'adf-parameter'):
+                values.setdefault(param.get('key'), param)
+            space = values.get('space')
+            space_fields = {c.get('key'): (c.text or '') for c in space} if space is not None else {}
+            ctx_ids = values.get('context-ids')
+            value = ctx_ids.find(AC + 'adf-parameter-value') if ctx_ids is not None else None
+            return DiagramContext(space_key=space_fields.get('key', ''),
+                                  space_id=space_fields.get('id', ''),
+                                  cloud_id=(values['cloud-id'].text or '') if 'cloud-id' in values else '',
+                                  account_id=(values['account-id'].text or '') if 'account-id' in values else '',
+                                  context_id=(value.text or '') if value is not None else '')
+    sys.exit(f'no "{PLANTUML_TITLE}" diagram found on any page: insert one by hand once, then rerun')
+
+
+def check_plantuml(diagrams):
+    diagrams = list(diagrams)
+    if not diagrams:
+        return
+    exe = shutil.which('plantuml')
+    if not exe:
+        sys.exit('plantuml not found; install it with: sudo bash docker/setup_ubuntu.sh')
+    with tempfile.TemporaryDirectory() as tmp:
+        files = []
+        for diagram in diagrams:
+            path = pathlib.Path(tmp) / f'{diagram.ident}.puml'
+            path.write_text(diagram.source + '\n', encoding='utf-8')
+            files.append(str(path))
+        if not files:
+            return
+        result = subprocess.run([exe, '-checkonly', *files], capture_output=True, text=True)
+        if result.returncode != 0:
+            sys.exit('PlantUML syntax check failed:\n' + result.stdout + result.stderr)
+
+
 def as_code(body):
     """Link text without the link; plain text becomes a code-formatted path or name."""
     return body if '<' in body else f'<code>{body}</code>'
@@ -144,15 +392,38 @@ def rewrite_link(match, doc_path, titles):
     return as_code(body)  # a repo file: name it, do not link into the code hosting
 
 
-def to_storage(md_text, doc_path, titles):
+def place_diagrams(body, doc_path, ctx):
+    """<!-- diagram: id --> + its ASCII code block -> the PlantUML diagram."""
+    diagrams = known_diagrams()
+
+    def replace(match):
+        ident = match.group(1)
+        diagram = diagrams.get(ident)
+        if diagram is None:
+            sys.exit(f'{doc_path}: diagram "{ident}" has no docs/diagrams/{ident}.puml')
+        if html.unescape(macro_code(match.group(2))).rstrip('\n') != diagram.ascii:
+            sys.exit(f'{doc_path}: the ASCII block of diagram "{ident}" differs from {ident}.txt')
+        return plantuml_macro(diagram, heading_before(body, match.start()) or ident, ctx)
+
+    body = re.sub(r'<!-- diagram: ([a-z0-9-]+) -->\s*(' + CODE_MACRO_RE.pattern + ')', replace, body,
+                  flags=re.S)
+    stray = re.search(r'<!-- diagram: ([a-z0-9-]+) -->', body)
+    if stray:
+        sys.exit(f'{doc_path}: diagram marker "{stray.group(1)}" is not followed by a code block')
+    return body
+
+
+def to_storage(md_text, doc_path, titles, ctx=None, publishing=True):
+    """Markdown -> page. publishing=False only builds a page to compare with (pull)."""
     title, body_md = split_title(md_text, doc_path)
     body = markdown.markdown(body_md, extensions=['tables', 'fenced_code'], output_format='xhtml')
     body = re.sub(r'<pre><code(?: class="language-([\w+-]+)")?>(.*?)</code></pre>', code_macro,
                   body, flags=re.S)
+    body = place_diagrams(body, doc_path, ctx or DiagramContext())
     body = re.sub(r'<a href="([^"]+)">(.*?)</a>', lambda m: rewrite_link(m, doc_path, titles),
                   body, flags=re.S)
     storage = body
-    validate_xhtml(storage, doc_path)
+    validate_xhtml(storage, doc_path, publishing)
     return title, storage
 
 
@@ -171,7 +442,7 @@ def parse_storage(storage):
                          ''.join(parts) + '</root>')
 
 
-def validate_xhtml(storage, doc_path):
+def validate_xhtml(storage, doc_path, publishing=True):
     try:
         parse_storage(storage)
     except ET.ParseError as e:
@@ -180,6 +451,13 @@ def validate_xhtml(storage, doc_path):
                                              storage)]
     if found:
         sys.exit(f'{doc_path}: a page must not reference {FORBIDDEN_ON_PAGES}: ' + ' | '.join(found))
+    if publishing:
+        for match in CODE_MACRO_RE.finditer(storage):
+            code = html.unescape(macro_code(match.group(0)))
+            if macro_language(match.group(0)) == 'none' and is_ascii_diagram(code):
+                first = next((line.strip() for line in code.split('\n') if line.strip()), '')
+                sys.exit(f'{doc_path}: ASCII diagram on a page ("{first[:50]}"): pages draw '
+                         'diagrams with PlantUML, see the diagram notes at the top of this script')
 
 
 # ---- storage XHTML -> Markdown --------------------------------------------------
@@ -187,7 +465,7 @@ def validate_xhtml(storage, doc_path):
 AC = '{urn:ac}'
 RI = '{urn:ri}'
 BLOCK_TAGS = {'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'table', 'pre', 'hr',
-              'blockquote', AC + 'structured-macro'}
+              'blockquote', AC + 'structured-macro', AC + 'adf-extension'}
 CODE_LANGUAGE_ALIASES = {'c++': 'cpp', 'shell': 'bash'}
 
 
@@ -229,10 +507,12 @@ class Links:
 
 
 class MarkdownWriter:
-    def __init__(self, doc_path, links, known_languages=None):
+    def __init__(self, doc_path, links, known_languages=None, known_links=None):
         self.doc_path = doc_path
         self.links = links
         self.known_languages = known_languages or {}
+        self.known_links = known_links or {}
+        self.diagrams = known_diagrams()
         self.problems = []
         self.in_table = False
 
@@ -283,6 +563,8 @@ class MarkdownWriter:
             return '\n'.join(f'> {line}'.rstrip() for line in body.split('\n'))
         if tag == AC + 'structured-macro':
             return self.macro(el)
+        if tag == AC + 'adf-extension':
+            return self.extension(el)
         self.problem(f'unsupported block <{tag.split("}")[-1]}>', el)
         return None
 
@@ -300,6 +582,32 @@ class MarkdownWriter:
         language = CODE_LANGUAGE_ALIASES.get(language, language)
         known = set(CODE_LANGUAGES.values()) - {'none'}
         return self.fence(code.rstrip('\n'), language if language in known else '')
+
+    def extension(self, el):
+        source = extension_source(el)
+        if source is None:
+            key, _ = extension_fields(el)
+            title = next((p.text for p in el.iter(AC + 'adf-parameter')
+                          if p.get('key') == 'extension-title'), None)
+            self.problem(f'unsupported app macro "{title or key or "?"}"')
+            return None
+        match = DIAGRAM_ID_RE.search(source)
+        ident = match.group(1) if match else None
+        diagram = self.diagrams.get(ident) if ident else None
+        if diagram is not None and diagram.source == source:
+            return DIAGRAM_MARKER.format(ident) + '\n' + self.fence(diagram.ascii, '')
+        changed = REPO_ROOT / 'build' / 'confluence-pull' / f'{ident or "unnamed"}.puml'
+        changed.parent.mkdir(parents=True, exist_ok=True)
+        changed.write_text(source + '\n', encoding='utf-8')
+        if ident is None:
+            self.problem(f"PlantUML diagram without a \"' rfs-diagram: <id>\" line (saved to {changed})")
+        elif diagram is None:
+            self.problem(f'diagram "{ident}" is new: add docs/diagrams/{ident}.puml and its ASCII '
+                         f'{ident}.txt (source saved to {changed})')
+        else:
+            self.problem(f'diagram "{ident}" was changed on the page: copy {changed} to '
+                         f'docs/diagrams/{ident}.puml and redraw {ident}.txt')
+        return None
 
     def fence(self, code, language):
         language = language or self.known_languages.get(code, '')
@@ -324,7 +632,7 @@ class MarkdownWriter:
         for child in el:
             if child.tag in BLOCK_TAGS:
                 flush()
-                if child.tag in ('pre', 'table', AC + 'structured-macro'):
+                if child.tag in ('pre', 'table', AC + 'structured-macro', AC + 'adf-extension'):
                     self.problem('code block, table or macro inside a list', child)
                 else:
                     md = self.block(child)
@@ -413,6 +721,8 @@ class MarkdownWriter:
         code = ''.join(el.itertext())
         if not code:
             return ''
+        if code in self.known_links:  # a repo link the page shows as a path
+            return self.known_links[code]
         if self.in_table and '|' in code:  # a raw pipe would split the table cell
             return '<code>' + escape_text(code).replace('|', '&#124;') + '</code>'
         longest = max((len(run) for run in re.findall(r'`+', code)), default=0)
@@ -489,8 +799,23 @@ def fence_languages(md_text):
     return found
 
 
-def storage_to_markdown(title, storage, doc_path, links, known_languages=None):
-    writer = MarkdownWriter(doc_path, links, known_languages)
+def repo_links(md_text, doc_path, titles):
+    """Links the page shows as a code-formatted name, so a pull can keep them in the repo copy."""
+    found = {}
+    for match in re.finditer(r'\[(`?)([^\]`]+)\1\]\(([^)\s]+)\)', md_text):
+        target = match.group(3)
+        if re.match(r'^[a-z]+:', target) and FORBIDDEN_ON_PAGES not in target:
+            continue  # other web links stay links on the page
+        resolved = os.path.normpath(os.path.join(os.path.dirname(doc_path),
+                                                 target.partition('#')[0])).replace('\\', '/')
+        if resolved in titles:
+            continue  # a link to another page stays a page link
+        found.setdefault(match.group(2), set()).add(match.group(0))
+    return {text: forms.pop() for text, forms in found.items() if len(forms) == 1}
+
+
+def storage_to_markdown(title, storage, doc_path, links, known_languages=None, known_links=None):
+    writer = MarkdownWriter(doc_path, links, known_languages, known_links)
     blocks = writer.blocks(parse_storage(storage), skip_banner=True)
     if writer.problems:
         raise ConversionError(writer.problems)
@@ -499,7 +824,7 @@ def storage_to_markdown(title, storage, doc_path, links, known_languages=None):
 
 def canonical(md_text, doc_path, titles, links):
     """The Markdown a page would have if it held md_text: comparable with a pulled page."""
-    title, storage = to_storage(md_text, doc_path, titles)
+    title, storage = to_storage(md_text, doc_path, titles, publishing=False)
     return storage_to_markdown(title, storage, doc_path, links)
 
 
@@ -746,7 +1071,10 @@ def cmd_draft(args):
     pages = manifest_pages(api, manifest)
     titles = {p: page['title'] for p, page in pages.items()}
     titles[path] = title
-    _, storage = to_storage(text, path, titles)
+    used = set(re.findall(r'<!-- diagram: ([a-z0-9-]+) -->', text))
+    check_plantuml([d for i, d in known_diagrams().items() if i in used])
+    ctx = diagram_context(page_storage(page) for page in pages.values()) if used else None
+    _, storage = to_storage(text, path, titles, ctx)
     if api.find(root['spaceId'], title) is not None:
         sys.exit(f'a page titled "{title}" already exists; refusing to overwrite it')
     parent_page = pages[args.parent]
@@ -755,6 +1083,10 @@ def cmd_draft(args):
     if args.dry_run:
         return
     page = api.create(root['spaceId'], parent_page['id'], title, storage)
+    if used:  # the diagrams record the page they live on
+        _, storage = to_storage(text, path, titles, ctx.for_page(page['id'], 2))
+        page = api.update(api.page(page['id']), title, storage,
+                          SYNC_PREFIX + content_hash(title, parent_page['id'], storage))
     manifest[path] = {'id': str(page['id']), 'parent': args.parent, 'state': 'draft'}
     save_manifest(manifest)
     print(f'created  "{title}" (id {page["id"]})')
@@ -803,6 +1135,58 @@ def cmd_cleanup(args):
                        SYNC_PREFIX + content_hash(page['title'], parent_id, new))
 
 
+def cmd_diagrams(args):
+    diagrams = known_diagrams()
+    by_ascii = {d.ascii: d for d in diagrams.values()}
+    check_plantuml(diagrams.values())
+    manifest = load_manifest()
+    api, _ = connect()
+    pages = manifest_pages(api, manifest)
+    template = diagram_context(page_storage(page) for page in pages.values())
+    leftovers = []
+    for path, page in pages.items():
+        old = page_storage(page)
+        ctx = template.for_page(page['id'], page['version']['number'] + 1)
+        done, removed = [], [0]
+
+        def drop_sample(match):
+            source = extension_source(parse_storage(match.group(0))[0])
+            if source is not None and source.strip() == PLANTUML_SAMPLE:
+                removed[0] += 1
+                return ''
+            return match.group(0)
+
+        new = ADF_EXTENSION_RE.sub(drop_sample, old)
+
+        def replace(match):
+            diagram = by_ascii.get(html.unescape(macro_code(match.group(0))).rstrip('\n'))
+            if diagram is None or macro_language(match.group(0)) != 'none':
+                return match.group(0)
+            done.append(diagram.ident)
+            return plantuml_macro(diagram, heading_before(new, match.start()) or diagram.ident, ctx)
+
+        new = CODE_MACRO_RE.sub(replace, new)
+        for match in CODE_MACRO_RE.finditer(new):
+            code = html.unescape(macro_code(match.group(0)))
+            if macro_language(match.group(0)) == 'none' and is_ascii_diagram(code):
+                leftovers.append(f'{path}: "{code.strip().splitlines()[0][:50]}"')
+        if new == old:
+            print(f'clean    "{page["title"]}"')
+            continue
+        note = f'; remove {removed[0]} test diagram(s)' if removed[0] else ''
+        print(f'{"would fix" if args.dry_run else "fix"} "{page["title"]}": '
+              f'{", ".join(done) or "no diagrams"}{note}')
+        if args.dry_run:
+            continue
+        validate_xhtml(new, path, publishing=False)
+        parent = manifest[path].get('parent')
+        parent_id = manifest[parent]['id'] if parent else page.get('parentId')
+        api.update(page, page['title'], new, SYNC_PREFIX + content_hash(page['title'], parent_id, new))
+    if leftovers:
+        print('ASCII diagrams without a docs/diagrams/*.txt match (left as they are):')
+        print('\n'.join(f'    {line}' for line in leftovers))
+
+
 def git_dirty(path):
     result = subprocess.run(['git', '-C', str(REPO_ROOT), 'status', '--porcelain', '--', path],
                             capture_output=True, text=True, check=True)
@@ -831,8 +1215,10 @@ def cmd_pull(args):
         local_file = REPO_ROOT / path
         local = local_file.read_text(encoding='utf-8') if local_file.is_file() else None
         known = fence_languages(local) if local else {}
+        kept_links = repo_links(local, path, titles) if local else {}
         try:
-            new = storage_to_markdown(headings[path], page_storage(pages[path]), path, links, known)
+            new = storage_to_markdown(headings[path], page_storage(pages[path]), path, links, known,
+                                      kept_links)
             plain = storage_to_markdown(headings[path], page_storage(pages[path]), path, links)
             if local is not None and canonical(local, path, titles, links) == plain:
                 print(f'unchanged {path}')
@@ -886,6 +1272,10 @@ def main():
     p = sub.add_parser('cleanup', help='remove the old banner and code-hosting references')
     p.add_argument('--dry-run', action='store_true', help='show the changes, change nothing')
     p.set_defaults(run=cmd_cleanup)
+
+    p = sub.add_parser('diagrams', help='replace ASCII diagrams on the pages with PlantUML')
+    p.add_argument('--dry-run', action='store_true', help='show the changes, change nothing')
+    p.set_defaults(run=cmd_diagrams)
 
     p = sub.add_parser('pull', help='write reviewed pages to the repo as Markdown')
     p.add_argument('paths', nargs='*', help='repo paths (default: all non-draft pages)')

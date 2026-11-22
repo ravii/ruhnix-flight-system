@@ -1,0 +1,17 @@
+@startuml
+' rfs-diagram: applog-replay
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+file "recording.mcap" as IN
+component "rfs_replay\nspeed: 1x / max / step\ntopic filter" as RP
+component "perception, localization, app\n(algorithm under test)" as UT
+component "rfs_record" as REC
+file "new.mcap" as OUT
+
+IN --> RP
+RP --> UT : recorded sensor topics\n/clock (recorded time)
+UT --> REC : new results
+REC --> OUT
+OUT ..> IN : diff against the original
+@enduml

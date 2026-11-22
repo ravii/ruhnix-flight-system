@@ -1,0 +1,15 @@
+  /localization/pose ------+
+  /perception/obstacles ---+--> +--------------+     +------------------+
+  /fc/attitude, /fc/status +    |  WorldModel  | --> | BehaviorManager  |
+                                | fused state  |     | (state machine)  |
+                                +--------------+     +------------------+
+                                                       |              |
+                                         setpoint      |              |  plan, state
+                                                       v              v
+                                               +------------------+   /app/plan
+                                               | SafetyLimiter    |
+                                               | speed, geofence  |
+                                               +------------------+
+                                                       |
+                                                       v
+                                          /app/setpoint, /app/command

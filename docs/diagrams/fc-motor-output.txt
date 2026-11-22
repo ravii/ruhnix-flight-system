@@ -1,0 +1,29 @@
+   +----------------------------+
+   |  FlightControl::update()   |
+   +----------------------------+
+                 |
+                 | ActuatorOutputs: motors[i] in [0, 1], armed
+                 v
+   +----------------------------+
+   |   Board::write_motors()    |
+   +----------------------------+
+           |               |
+           | real board    | simulation
+           v               v
+   +----------------+   +---------------------+
+   | EscOutput      |   | SimBoard            |
+   | (core/esc)     |   | sends 0..1 to the   |
+   | map + encode   |   | simulator unchanged |
+   +----------------+   +---------------------+
+           |
+           | EscFrame: DShot frames / PWM pulse widths (ns)
+           v
+   +----------------+
+   | EscBus         |
+   | (bsp/<board>)  |
+   | timers + DMA   |
+   +----------------+
+           |
+           | DShot / PWM signal
+           v
+      ESC x N --> motors

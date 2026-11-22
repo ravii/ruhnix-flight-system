@@ -1,0 +1,23 @@
+@startuml
+' rfs-diagram: applog-app-internals
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+left to right direction
+queue "/localization/pose" as T1
+queue "/perception/obstacles" as T2
+queue "/fc/attitude, /fc/status" as T3
+component "WorldModel\nfused state" as WM
+component "BehaviorManager\n(state machine)" as BM
+component "SafetyLimiter\nspeed, geofence" as SL
+queue "/app/setpoint, /app/command" as OUT
+queue "/app/plan" as PLAN
+
+T1 --> WM
+T2 --> WM
+T3 --> WM
+WM --> BM
+BM --> SL : setpoint
+BM --> PLAN : plan, state
+SL --> OUT
+@enduml

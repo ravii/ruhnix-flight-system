@@ -1,0 +1,12 @@
+  bus topics                                 rfs_record
+                                       +-----------------------------+
+  /fc/*                  ----+         | subscribe: all or a filter  |
+  /localization/pose     ----+         | timestamp: receive time and |
+  /perception/obstacles  ----+-------> |   message header time       |
+  /app/*                 ----+         | MCAP writer: chunked, zstd  |
+  /log/text, /log/plot/* ----+         +-----------------------------+
+  /camera/depth (option) ----+                       |
+                                                     v
+                                      run_<date>_<time>/
+                                      ├── recording.mcap     所有通道：传感器、结果、日志、曲线
+                                      └── text/<进程>.log    文本日志，便于 grep

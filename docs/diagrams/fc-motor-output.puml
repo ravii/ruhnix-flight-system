@@ -1,0 +1,20 @@
+@startuml
+' rfs-diagram: fc-motor-output
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+component "FlightControl::update()" as FCU
+component "Board::write_motors()" as WM
+component "EscOutput (core/esc)\nmap + encode" as EO
+component "SimBoard\nsends 0..1 to the simulator unchanged" as SB
+component "EscBus (bsp/~<board>)\ntimers + DMA" as EB
+component "ESC x N" as ESC
+component "motors" as MOT
+
+FCU --> WM : ActuatorOutputs: motors[i] in [0, 1], armed
+WM --> EO : real board
+WM --> SB : simulation
+EO --> EB : EscFrame: DShot frames / PWM pulse widths (ns)
+EB --> ESC : DShot / PWM signal
+ESC --> MOT
+@enduml

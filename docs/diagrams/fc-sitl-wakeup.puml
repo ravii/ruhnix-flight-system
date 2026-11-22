@@ -1,0 +1,17 @@
+@startuml
+' rfs-diagram: fc-sitl-wakeup
+skinparam shadowing false
+participant "rfs_sim\nUdpLink" as SIM
+box "flight_controller (SITL)"
+  participant "IDLE task" as IDLE
+  participant "control task" as CTRL
+end box
+
+note over IDLE : poll() on the socket\n相当于 MCU 上的 WFI
+SIM -> IDLE : SIM_SENSORS (UDP datagram)
+IDLE -> CTRL : xTaskNotifyGive()\n相当于 IMU 中断
+activate CTRL
+CTRL -> CTRL : wait_imu() returns\nFlightControl::update()
+CTRL -> SIM : SIM_ACTUATORS (write_motors())
+deactivate CTRL
+@enduml

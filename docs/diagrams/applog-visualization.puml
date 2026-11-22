@@ -1,0 +1,15 @@
+@startuml
+' rfs-diagram: applog-visualization
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+left to right direction
+file "recording.mcap" as MCAP
+file "rfs_sim CSV" as CSV
+component "Foxglove / Lichtblick" as FG
+component "PlotJuggler" as PJ
+
+MCAP --> FG : 3D trajectory, obstacles, planned path; plots; logs
+MCAP --> PJ : 2D curves
+CSV --> PJ : works today, no code needed
+@enduml
