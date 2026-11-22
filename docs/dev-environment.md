@@ -31,6 +31,23 @@ exec bash -l                                # 重新加载 PATH（/opt/venv/bin�
 scripts/build_all.sh                        # 构建并测试所有模块
 ```
 
+### 在 Windows 上编辑，在 WSL 里构建和调试（同一份代码）
+
+如果代码 clone 在 Windows 盘上（比如 `D:\Dev\...`），并且希望继续在 Windows 版 VS Code 里编辑、跳转代码，那么不需要在 WSL 里再 clone 一份。WSL 可以通过 `/mnt/d/...` 直接构建这份代码：
+
+```bash
+# Windows 的 Git Bash 里，在仓库根目录执行
+scripts/wsl.sh scripts/build_all.sh        # 在 WSL 里构建并测试全部模块
+scripts/wsl.sh scripts/build_all.sh simulator  # 只构建某个模块
+scripts/wsl.sh                             # 进入 WSL shell，当前目录就是这个仓库，可以直接用 gdb
+```
+
+- 源码只有一份，WSL 从 `/mnt/<盘符>/...` 读取。构建产物放在 WSL 自己的文件系统里（`BUILD_ROOT` 默认是 `~/uav-build`），所以速度不受影响
+- 调试时在 WSL 里执行，比如 `gdb --args ~/uav-build/flight-controller/fc_test_core`
+- VS Code 的 `Ctrl+Shift+B` 会调用 `scripts/wsl.sh` 构建，编译错误会映射回 Windows 上的文件（配置在本地的 `.vscode/tasks.json` 里）
+- Windows 上的 C/C++ 扩展只负责代码跳转（`.vscode/c_cpp_properties.json`），**不要在 Windows 上用 MSVC 构建**
+- git 操作在 Windows 上做，不要在 WSL 里对 `/mnt/d/...` 执行 git（两边的权限位和换行符处理不一样）
+
 ### VS Code
 
 在 WSL 里执行 `code ~/uav-flight`，VS Code 会通过 **WSL 扩展**（Windows 上要装 `ms-vscode-remote.remote-wsl`）连进 WSL，然后提示安装 [.vscode/extensions.json](../.vscode/extensions.json) 里推荐的扩展（CMake Tools、C/C++、clang-format、Claude Code）。这些扩展装在 WSL 里，只需要装一次。

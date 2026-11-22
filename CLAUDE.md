@@ -10,10 +10,11 @@ Monorepo of independently built modules: `common/` (C protocol headers), `flight
 
 ## Build and test (WSL2 / Docker, Ubuntu 26.04)
 
-Development happens in WSL2 (repo at `~/uav-flight`); the Docker image is the CI / clean-room environment. Both get their toolchain from `docker/setup_ubuntu.sh` — add new tools there, never only in one place. See `docs/dev-environment.md`.
+Code is edited on Windows (this checkout, VS Code navigation only); building, testing and debugging happen in WSL2 on the **same checkout** via `/mnt/<drive>/...` — there is no second clone to sync. From Git Bash, prefix any command with `scripts/wsl.sh` (build output goes to `~/uav-build` inside WSL). The Docker image is the CI / clean-room environment. Both get their toolchain from `docker/setup_ubuntu.sh` — add new tools there, never only in one place. See `docs/dev-environment.md`.
 
 ```bash
-scripts/build_all.sh                          # all modules, or: scripts/build_all.sh esc simulator
+scripts/wsl.sh scripts/build_all.sh           # from Windows: build + test in WSL on this checkout
+scripts/build_all.sh                          # inside WSL: all modules, or: scripts/build_all.sh esc simulator
 scripts/format.sh --check
 scripts/docker.sh run scripts/build_all.sh    # same check in the CI image
 scripts/docker.sh build                       # if Docker Hub is blocked:
