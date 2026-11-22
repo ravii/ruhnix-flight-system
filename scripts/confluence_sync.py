@@ -352,10 +352,33 @@ def diagram_context(storages):
     sys.exit(f'no "{PLANTUML_TITLE}" diagram found on any page: insert one by hand once, then rerun')
 
 
+PLANTUML_ELEMENT_RE = re.compile(
+    r'^\s*(?:actor|agent|artifact|boundary|card|cloud|collections|component|control|database|entity|'
+    r'file|folder|frame|interface|node|package|participant|queue|rectangle|stack|storage|usecase)'
+    r'\s+(?:"([^"]*)"|([^\s{]+))')
+
+
+def plantuml_lint(source):
+    """What the Confluence app cannot draw although plantuml accepts it."""
+    problems = []
+    for number, line in enumerate(source.split('\n'), 1):
+        match = PLANTUML_ELEMENT_RE.match(line)
+        name = (match.group(1) if match.group(1) is not None else match.group(2)) if match else None
+        shorthand = re.match(r'^\s*\[([^\]]*)\]', line)
+        name = name if name is not None else (shorthand.group(1) if shorthand else None)
+        if name and ':' in name:
+            problems.append(f'line {number}: ":" in the element name "{name[:40]}" (the Confluence app '
+                            'renders the diagram blank; write Board, not rfs::fc::Board)')
+    return problems
+
+
 def check_plantuml(diagrams):
     diagrams = list(diagrams)
     if not diagrams:
         return
+    problems = [f'{d.ident} {p}' for d in diagrams for p in plantuml_lint(d.source)]
+    if problems:
+        sys.exit('diagrams the PlantUML app cannot draw:\n' + '\n'.join(f'    {p}' for p in problems))
     exe = shutil.which('plantuml')
     if not exe:
         sys.exit('plantuml not found; install it with: sudo bash docker/setup_ubuntu.sh')

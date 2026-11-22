@@ -5,11 +5,11 @@ skinparam shadowing false
 
 left to right direction
 file "recording.mcap" as MCAP
-file "rfs_sim CSV" as CSV
+file "rfs_sim 的 CSV" as CSV
 component "Foxglove / Lichtblick" as FG
 component "PlotJuggler" as PJ
 
-MCAP --> FG : 3D trajectory, obstacles, planned path; plots; logs
-MCAP --> PJ : 2D curves
-CSV --> PJ : works today, no code needed
+MCAP --> FG : 3D 轨迹、障碍物、规划路径；曲线；日志
+MCAP --> PJ : 2D 曲线
+CSV --> PJ : 现在就能用，无需写代码
 @enduml

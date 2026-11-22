@@ -4,8 +4,8 @@ skinparam componentStyle rectangle
 skinparam shadowing false
 
 left to right direction
-queue "bus topics\n/fc/*\n/localization/pose\n/perception/obstacles\n/app/*\n/log/text, /log/plot/*\n/camera/depth (option)" as TOPICS
-component "rfs_record\nsubscribe: all or a filter\ntimestamp: receive time and message header time\nMCAP writer: chunked, zstd" as REC
+queue "总线 topic\n/fc/*\n/localization/pose\n/perception/obstacles\n/app/*\n/log/text, /log/plot/*\n/camera/depth（可选）" as TOPICS
+component "录制进程 rfs_record\n订阅全部或指定 topic\n时间戳取接收时间和消息头时间\nMCAP 写入，分块、zstd 压缩" as REC
 folder "run_<date>_<time>/" {
   file "recording.mcap\n所有通道：传感器、结果、日志、曲线" as MCAP
   file "text/<进程>.log\n文本日志，便于 grep" as LOGS

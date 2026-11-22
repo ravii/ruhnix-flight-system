@@ -3,18 +3,18 @@
 skinparam componentStyle rectangle
 skinparam shadowing false
 
-component "app/  ControlTask (FreeRTOS)\nblocks on wait_imu()" as TASK
-component "core/  FlightControl\npure function" as CORE
-component "rfs::fc::Board" as BOARD
-component "bsp/~<board>\nSPI, timers, EscBus" as BSP
-component "bsp/sim\nSimBoard + SimBackend" as SIMB
-component "simulator, in-process\n(1) algorithm loop" as INPROC
-component "simulator over UDP (SITL)\nor serial (HITL)\n(2) (3)" as REMOTE
+component "控制任务（FreeRTOS）\n阻塞在 wait_imu()" as TASK
+component "飞控算法 FlightControl\n纯函数，位于 core/" as CORE
+component "板级接口 Board" as BOARD
+component "真实板子 bsp/~<board>\nSPI、定时器、电调总线" as BSP
+component "仿真板 bsp/sim\nSimBoard + SimBackend" as SIMB
+component "仿真器，进程内\n(1) 算法闭环" as INPROC
+component "仿真器，UDP 或串口\n(2) SITL  (3) HITL" as REMOTE
 
 TASK --> CORE : update()
 TASK --> BOARD : wait_imu() / write_motors()
 BOARD --> BSP
 BOARD --> SIMB
-INPROC -up-> CORE
-REMOTE -up-> SIMB
+CORE <-- INPROC
+SIMB <-- REMOTE
 @enduml

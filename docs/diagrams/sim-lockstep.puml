@@ -1,16 +1,16 @@
 @startuml
 ' rfs-diagram: sim-lockstep
 skinparam shadowing false
-participant VehicleModel
-participant SensorModel
-participant FcLink
-participant "flight controller\n(under test)" as FC
+participant "机体模型\nVehicleModel" as VM
+participant "传感器模型\nSensorModel" as SM
+participant "飞控连接\nFcLink" as LINK
+participant "飞控（被测）" as FC
 
-loop every physics step
-  VehicleModel -> SensorModel : truth
-  SensorModel -> FcLink : (1) SIM_SENSORS
-  FcLink -> FC : (2) send, wait
-  FC --> FcLink : reply
-  FcLink -> VehicleModel : SIM_ACTUATORS\n(3) step(actuators, dt)
+loop 每个物理步长
+  VM -> SM : 真值
+  SM -> LINK : (1) SIM_SENSORS
+  LINK -> FC : (2) 发送并等待
+  FC --> LINK : 应答
+  LINK -> VM : SIM_ACTUATORS\n(3) step(actuators, dt)
 end
 @enduml

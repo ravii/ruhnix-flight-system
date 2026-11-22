@@ -3,35 +3,34 @@
 skinparam componentStyle rectangle
 skinparam shadowing false
 
-agent "camera / depth" as CAM
+agent "相机 / 深度相机" as CAM
 agent "GNSS / VIO" as GNSS
 agent "IMU" as IMU
-agent "RC receiver" as RC
+agent "遥控接收机" as RC
+agent "电机 0" as M0
+agent "电机 1" as M1
+agent "电机 2" as M2
+agent "电机 3" as M3
 
 rectangle "机载计算机（ARM64 Linux）" {
-  component "perception" as PER
-  component "localization" as LOC
+  component "感知" as PER
+  component "定位" as LOC
 }
 rectangle "飞控 MCU（FreeRTOS）" {
-  component "flight controller\ncontrol task @ 1 kHz\nFlightControl -> mixer -> EscOutput -> EscBus" as FC
+  component "飞控\n控制任务 1 kHz\n飞控算法 → 混控 → 电调输出 → 电调总线" as FC
 }
-agent "motor 0" as M0
-agent "motor 1" as M1
-agent "motor 2" as M2
-agent "motor 3" as M3
-
 rectangle "成品电调" {
-  component "ESC 0" as E0
-  component "ESC 1" as E1
-  component "ESC 2" as E2
-  component "ESC 3" as E3
+  component "电调 0" as E0
+  component "电调 1" as E1
+  component "电调 2" as E2
+  component "电调 3" as E3
 }
 
 CAM --> PER
 GNSS --> LOC
-PER -right-> LOC : obstacles
-LOC --> FC : UART: pose estimate, setpoints
-FC --> LOC : UART: IMU, attitude, heartbeat
+PER -> LOC : 障碍物
+LOC --> FC : UART，位姿估计、指令
+FC --> LOC : UART，IMU、姿态、心跳
 IMU --> FC
 RC --> FC
 FC --> E0 : DShot

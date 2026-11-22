@@ -3,19 +3,19 @@
 skinparam componentStyle rectangle
 skinparam shadowing false
 
-agent "camera / depth" as CAM
+agent "相机 / 深度相机" as CAM
 agent "GNSS / VIO" as GNSS
 
-rectangle "AP: companion computer, ARM64 Linux" {
-  component "perception" as PER
-  component "localization" as LOC
-  component "app" as APP
-  component "fc_link" as LINK
-  queue "message bus\nnamed topics carrying rfs::common messages" as BUS
-  component "log: rfs_record" as REC
+rectangle "机载计算机（ARM64 Linux）" {
+  component "感知" as PER
+  component "定位" as LOC
+  component "智能应用 app" as APP
+  component "飞控链路 fc_link" as LINK
+  queue "消息总线\n按 topic 发布和订阅" as BUS
+  component "录制 rfs_record" as REC
 }
-node "flight controller" as FC
-folder "run_<date>_<time>/\n.mcap + .log" as RUN
+node "飞控" as FC
+folder "run_<date>_<time>/\n.mcap 和 .log" as RUN
 
 CAM --> PER
 GNSS --> LOC
@@ -24,6 +24,6 @@ LOC <--> BUS
 APP <--> BUS
 LINK <--> BUS
 LINK <--> FC : UART
-BUS --> REC : subscribes to every topic
+BUS --> REC : 订阅全部 topic
 REC --> RUN
 @enduml

@@ -37,6 +37,7 @@ Build directories are `build/<host|arm64|sitl|fw-BOARD>/<module>`. FreeRTOS-Kern
 ## Docs
 
 - Confluence pages draw architecture diagrams with the PlantUML plugin, never as ASCII art. ASCII diagrams are only for the Markdown docs in the repo.
+- PlantUML diagrams: no `:` in element names or labels (the Confluence app fails to render them; write `Board`, not `rfs::fc::Board`). Name the project's own modules in Chinese (`感知`, `飞控算法`, `消息总线`); keep established industry terms as they are (IMU, GNSS, UART, DShot, FreeRTOS, MCAP). A second line may carry the code name (`飞控算法\nFlightControl`).
 - Diagrams in repo Markdown are pure-ASCII flowcharts (`+--+`, `|`, `-->`, `v`, `^`). Non-ASCII text (Chinese) only at the end of a line, never left of a box edge or arrow; CJK and box-drawing glyphs have font-dependent widths and break alignment. Directory trees may keep `├──`.
 - Confluence is the master for the design docs listed in `scripts/confluence_sync.py` and `docs/confluence_pages.json`, and for new design docs. Write and change them in Confluence first; the user reviews and edits the page there. Only after the review is done and the code is implemented, store the idempotent Markdown copy in the repo with `python scripts/confluence_sync.py pull` (diagrams as ASCII). Never edit the repo copy first and push it up.
 - Credentials live only in `~/.confluence/confluence.env` — never put tokens in the repo.

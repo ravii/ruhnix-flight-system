@@ -4,14 +4,14 @@ skinparam componentStyle rectangle
 skinparam shadowing false
 
 file "recording.mcap" as IN
-component "rfs_replay\nspeed: 1x / max / step\ntopic filter" as RP
-component "perception, localization, app\n(algorithm under test)" as UT
-component "rfs_record" as REC
+component "回放进程 rfs_replay\n速度 1x / 最快 / 单步\ntopic 过滤" as RP
+component "被测算法\n感知、定位、智能应用" as UT
+component "录制进程 rfs_record" as REC
 file "new.mcap" as OUT
 
 IN --> RP
-RP --> UT : recorded sensor topics\n/clock (recorded time)
-UT --> REC : new results
+RP --> UT : 录制的传感器 topic\n/clock（录制时间）
+UT --> REC : 新结果
 REC --> OUT
-OUT ..> IN : diff against the original
+OUT ..> IN : 和原始录制比对
 @enduml

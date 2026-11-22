@@ -3,18 +3,18 @@
 skinparam componentStyle rectangle
 skinparam shadowing false
 
-rectangle "process: perception / localization / app" {
-  component "algorithm code" as ALG
-  component "bus client" as BC
-  component "rfs::log library\nsinks: console, text file, bus" as LOG
+rectangle "感知、定位、智能应用进程" {
+  component "算法代码" as ALG
+  component "总线客户端" as BC
+  component "日志库\n输出到控制台、文本文件、总线" as LOG
 }
-queue "message bus" as BUS
-file "<process>.log" as TXT
+queue "消息总线" as BUS
+file "<进程>.log" as TXT
 
-ALG --> BC : publish, subscribe
-ALG --> LOG : RFS_LOG_INFO(...): text log
-ALG --> LOG : plot API: scalar, pose, path
+ALG --> BC : 发布、订阅
+ALG --> LOG : RFS_LOG_INFO(...) 文本日志
+ALG --> LOG : 曲线接口，标量、位姿、路径
 BC --> BUS
-LOG --> TXT : text file sink
-LOG --> BUS : bus sink: /log/text, /log/plot/*
+LOG --> TXT : 文本文件输出
+LOG --> BUS : 总线输出 /log/text、/log/plot/*
 @enduml
