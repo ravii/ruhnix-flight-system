@@ -1,23 +1,41 @@
 # flight-controller — 飞控固件
 
-运行在 MCU 上的 FreeRTOS 固件，负责传感器采集、姿态估计、姿态/角速度控制和电机输出。
+运行在 MCU 上的 FreeRTOS 固件（C++17），负责传感器采集、姿态控制和电机输出。
 
 ## 分层
 
 ```
-app/      FreeRTOS 任务：控制环（1 kHz）、遥测（10 Hz）…
+app/        FreeRTOS 任务（ControlTask、TelemetryTask）、运行时支持（new/delete → FreeRTOS 堆）
   │
-  ├── core/    平台无关算法：PID、混控器 …（不得包含 FreeRTOS/硬件头文件）
-  └── bsp/     板级支持：实现 bsp/include/fc_bsp.h
-config/   FreeRTOSConfig.h
-tests/    core/ 的主机端单元测试
+  ├── core/        纯算法：FlightControl、Pid、QuadXMixer（不包含 FreeRTOS 或硬件头文件）
+  └── bsp/
+      ├── include/fc/bsp/board.hpp   硬件抽象接口 fc::Board
+      ├── sim/                       仿真板：SimBoard + SimBackend
+      ├── _template/                 新板子模板
+      └── <board>/                   真实硬件
+config/     FreeRTOSConfig.h
+tests/      主机端单元测试
 ```
 
-`core/` 保持与平台无关，所以算法可以直接在 PC 上测试，以后也能复用到 SITL 仿真中。
+## 为仿真预留的设计
+
+1. **算法是纯函数**：`fc::FlightControl::update(Input, dt) → ActuatorOutputs` 不读时钟、不碰硬件、不调用 RTOS。仿真器可以在进程内直接调用它（算法闭环），单元测试也是这样测的。中间信号通过 `debug()` 暴露出来，方便画图。
+2. **控制环由 IMU 驱动**：`ControlTask` 阻塞在 `Board::wait_imu()` 上，而不是阻塞在 RTOS 定时器上。真机上它由 IMU 的数据就绪中断唤醒，仿真里由模拟器发来的传感器包唤醒，所以固件不用改就能和模拟器锁步运行。
+3. **时间来自 Board**：`Board::time_us()` 在仿真里返回的是仿真时间。
+
+详细说明见 [../simulator/README.md](../simulator/README.md)。
+
+## C++ 使用约定
+
+- C++17，编译选项 `-fno-exceptions -fno-rtti`
+- 调度器启动后不做堆分配；不用 `std::vector`、`std::string`、`std::function`、`iostream`
+- 用 `std::array`、`constexpr` 和静态对象；`operator new` 已经接到 `pvPortMalloc`（[app/runtime.cpp](app/runtime.cpp)）
+- `configASSERT()` 里面不要写有副作用的表达式
+- 协议结构体是 packed 的：逐个元素复制，不要对它的成员取引用或取指针
 
 ## 构建
 
-主机端单元测试：
+主机端（core + SimBoard + 单元测试）：
 
 ```bash
 cmake -S flight-controller -B build/fc-host
@@ -29,15 +47,17 @@ ctest --test-dir build/fc-host --output-on-failure
 
 ```bash
 cmake -S flight-controller -B build/fc-fw \
-      -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/arm-none-eabi.cmake \
+      -DCMAKE_TOOLCHAIN_FILE=$PWD/cmake/toolchains/arm-none-eabi.cmake \
       -DFC_BOARD=stm32f4
 cmake --build build/fc-fw
 # 产物：build/fc-fw/flight_controller.{elf,bin,hex,map}
 ```
 
-## 任务与优先级
+不设置 `FC_BOARD` 就是主机构建；设置了就构建固件。
 
-| 任务 | 周期 | 优先级 | 说明 |
-|------|------|--------|------|
-| `control` | 1 ms | 最高 | IMU 读取 → 角速度 PID → 混控 → 电机 |
+## 任务
+
+| 任务 | 触发方式 | 优先级 | 说明 |
+|------|----------|--------|------|
+| `control` | `Board::wait_imu()`（约 1 kHz） | 最高 | IMU + 遥控 → `FlightControl::update()` → 电机；IMU 超时就关电机 |
 | `telemetry` | 100 ms | 低 | 向机载计算机发送心跳 |

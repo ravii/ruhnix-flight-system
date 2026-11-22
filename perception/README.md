@@ -17,7 +17,7 @@ ctest --test-dir build/perception-host --output-on-failure
 
 # 交叉编译到 ARM64
 cmake -S perception -B build/perception-arm64 \
-      -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/aarch64-linux-gnu.cmake \
+      -DCMAKE_TOOLCHAIN_FILE=$PWD/cmake/toolchains/aarch64-linux-gnu.cmake \
       -DCMAKE_SYSROOT=/path/to/sysroot
 cmake --build build/perception-arm64
 ```

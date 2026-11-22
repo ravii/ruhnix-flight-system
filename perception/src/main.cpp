@@ -7,12 +7,17 @@
 
 #include "perception/obstacle_detector.hpp"
 
-namespace {
+namespace
+{
 std::atomic<bool> g_running{true};
-void on_signal(int) { g_running = false; }
+void on_signal(int)
+{
+    g_running = false;
+}
 }  // namespace
 
-int main() {
+int main()
+{
     std::signal(SIGINT, on_signal);
     std::signal(SIGTERM, on_signal);
 
@@ -21,10 +26,12 @@ int main() {
 
     std::printf("perception: started\n");
     auto next = std::chrono::steady_clock::now();
-    while (g_running) {
+    while (g_running)
+    {
         // TODO: grab a depth frame from the camera driver (V4L2 / vendor SDK).
         uav::perception::DepthImage frame;
-        if (auto obstacle = detector.nearest(frame)) {
+        if (auto obstacle = detector.nearest(frame))
+        {
             // TODO: publish to localization / flight controller.
             (void)obstacle;
         }

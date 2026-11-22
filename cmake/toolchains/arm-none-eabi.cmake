@@ -1,7 +1,7 @@
 # Toolchain for bare-metal / FreeRTOS ARM Cortex-M targets.
 # CPU-specific flags (-mcpu, -mfpu, -mfloat-abi) are set by each board's BSP.
 #
-# Usage: -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/arm-none-eabi.cmake
+# Usage: -DCMAKE_TOOLCHAIN_FILE=$PWD/cmake/toolchains/arm-none-eabi.cmake
 # Optional: -DARM_TOOLCHAIN_DIR=/opt/arm-gnu-toolchain/bin
 
 set(CMAKE_SYSTEM_NAME Generic)

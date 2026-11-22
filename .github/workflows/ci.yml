@@ -5,22 +5,23 @@ on:
     branches: [main]
   pull_request:
 
+# Everything runs inside the same dev image developers use (docker/Dockerfile),
+# so CI and local results match.
 jobs:
-  host:
-    name: ${{ matrix.module }} (host)
+  build:
+    name: format + build + test (Ubuntu 26.04 container)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        module: [common, flight-controller, esc, perception, localization]
     steps:
       - uses: actions/checkout@v4
-      - name: Configure
-        run: cmake -S ${{ matrix.module }} -B build -DUAV_WARNINGS_AS_ERRORS=ON
-      - name: Build
-        run: cmake --build build --parallel
-      - name: Test
-        run: ctest --test-dir build --output-on-failure
+
+      - name: Build dev image
+        run: bash scripts/docker.sh build
+
+      - name: Check formatting
+        run: bash scripts/docker.sh run bash scripts/format.sh --check
+
+      - name: Build and test all modules
+        run: bash scripts/docker.sh run bash scripts/build_all.sh
 
   # Enable once FreeRTOS-Kernel is added as a submodule and a board exists in bsp/.
   # firmware:
@@ -28,8 +29,9 @@ jobs:
   #   steps:
   #     - uses: actions/checkout@v4
   #       with: { submodules: recursive }
-  #     - run: sudo apt-get update && sudo apt-get install -y gcc-arm-none-eabi
+  #     - run: bash scripts/docker.sh build
   #     - run: >
-  #         cmake -S flight-controller -B build-fc
-  #         -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/arm-none-eabi.cmake -DFC_BOARD=stm32f4
-  #     - run: cmake --build build-fc --parallel
+  #         bash scripts/docker.sh run
+  #         cmake -S flight-controller -B build/fc-fw -G Ninja
+  #         -DCMAKE_TOOLCHAIN_FILE=/workspace/cmake/toolchains/arm-none-eabi.cmake -DFC_BOARD=stm32f4
+  #         '&&' cmake --build build/fc-fw

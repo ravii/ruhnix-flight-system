@@ -7,12 +7,17 @@
 
 #include "localization/pose_estimator.hpp"
 
-namespace {
+namespace
+{
 std::atomic<bool> g_running{true};
-void on_signal(int) { g_running = false; }
+void on_signal(int)
+{
+    g_running = false;
+}
 }  // namespace
 
-int main() {
+int main()
+{
     std::signal(SIGINT, on_signal);
     std::signal(SIGTERM, on_signal);
 
@@ -22,7 +27,8 @@ int main() {
 
     std::printf("localization: started\n");
     auto next = std::chrono::steady_clock::now();
-    while (g_running) {
+    while (g_running)
+    {
         // TODO: read IMU from the flight controller, rotate to world frame, remove gravity.
         estimator.predict({0.0f, 0.0f, 0.0f}, kDt);
         // TODO: estimator.correct_position(...) on GNSS / VIO updates.

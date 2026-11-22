@@ -1,0 +1,9 @@
+{
+    "recommendations": [
+        "ms-vscode.cmake-tools",
+        "ms-vscode.cpptools",
+        "xaver.clang-format",
+        "anthropic.claude-code",
+        "ms-vscode-remote.remote-wsl"
+    ]
+}

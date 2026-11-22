@@ -1,6 +1,6 @@
 # uav-flight
 
-一个自研多旋翼无人机项目，包含 **飞控**、**电调**、**感知**、**定位** 四个模块。
+一个自研多旋翼无人机项目，包含 **飞控**、**电调**、**感知**、**定位** 四个模块，外加一个用于调试的 **仿真器**。
 
 每个模块都是**独立编译、独立部署**的工程，可以运行在不同的板子上。它们放在同一个仓库里，共享通信协议和消息定义，这样跨模块的接口改动可以在一次提交里完成。
 
@@ -8,41 +8,61 @@
 
 | 模块 | 目录 | 运行平台 | 操作系统 | 语言 | 工具链 |
 |------|------|----------|----------|------|--------|
-| 飞控 Flight Controller | [flight-controller/](flight-controller/) | MCU (Cortex-M4F/M7) | FreeRTOS | C11 | `arm-none-eabi-gcc` |
-| 电调 ESC | [esc/](esc/) | MCU (Cortex-M4F) | FreeRTOS | C11 | `arm-none-eabi-gcc` |
+| 飞控 Flight Controller | [flight-controller/](flight-controller/) | MCU (Cortex-M4F/M7) | FreeRTOS | C++17 | `arm-none-eabi-g++` |
+| 电调 ESC | [esc/](esc/) | MCU (Cortex-M4F) | FreeRTOS | C++17 | `arm-none-eabi-g++` |
 | 感知 Perception | [perception/](perception/) | 机载计算机 (ARM64) | Linux | C++17 | `aarch64-linux-gnu-g++` |
 | 定位 Localization | [localization/](localization/) | 机载计算机 (ARM64) | Linux | C++17 | `aarch64-linux-gnu-g++` |
-| 公共库 Common | [common/](common/) | 所有平台 | 与平台无关 | C11 | 随使用方 |
+| 仿真器 Simulator | [simulator/](simulator/) | 开发电脑 | Linux / Windows | C++17 | 主机编译器 |
+| 公共协议 Common | [common/](common/) | 所有平台 | 与平台无关 | C11 头文件 | 随使用方 |
 
 ## 目录结构
 
 ```
 uav-flight/
-├── common/               # 跨模块共享：通信协议、消息定义、CRC（纯 C，无 OS 依赖）
+├── common/               # 跨模块共享：通信协议、消息定义、CRC（C 头文件，C/C++ 都能用）
 ├── flight-controller/    # 飞控固件（FreeRTOS）
-│   ├── core/             #   平台无关的算法（姿态控制、PID …），可在主机上做单元测试
+│   ├── core/             #   纯算法：FlightControl、PID、混控器，可在主机上测试
 │   ├── app/              #   FreeRTOS 任务与应用入口
-│   ├── bsp/              #   板级支持包（启动文件、链接脚本、HAL），按板子分子目录
-│   ├── config/           #   FreeRTOSConfig.h 等配置
+│   ├── bsp/              #   硬件抽象 fc::Board；sim/ 是仿真板，其他子目录是真实板子
+│   ├── config/           #   FreeRTOSConfig.h
 │   └── tests/            #   主机端单元测试
 ├── esc/                  # 电调固件（FreeRTOS），布局同飞控
 ├── perception/           # 感知应用（Linux）
 ├── localization/         # 定位应用（Linux）
+├── simulator/            # 仿真器：动力学/传感器模型接口、锁步调度
 ├── cmake/                # 公共 CMake 脚本与交叉编译工具链文件
-│   └── toolchains/
 ├── third_party/          # 第三方依赖（FreeRTOS-Kernel 等，用 git submodule 引入）
+├── docker/               # 开发容器镜像（Ubuntu 26.04）
+├── .devcontainer/        # VS Code Dev Container 配置
 ├── docs/                 # 设计文档
 ├── tools/                # 上位机/调试工具
-└── scripts/              # 构建、烧录、部署脚本
+└── scripts/              # docker.sh、build_all.sh、format.sh、git hook
 ```
+
+## 开发环境（WSL2 + Docker）
+
+- **日常开发在 WSL2（Ubuntu 26.04）里进行**：用 VS Code 的 WSL 扩展连进去编辑、构建、调试
+- **Docker 镜像**（同样是 Ubuntu 26.04）用于 CI 和"在干净环境里复现"
+- 两边的工具链都由同一个脚本 [docker/setup_ubuntu.sh](docker/setup_ubuntu.sh) 安装，版本一致
+
+```bash
+# WSL 里，第一次
+git clone https://github.com/stingliang/uav-flight.git ~/uav-flight && cd ~/uav-flight
+sudo bash docker/setup_ubuntu.sh
+git config core.hooksPath scripts/git-hooks
+
+# 日常
+scripts/build_all.sh                       # 构建并测试所有模块
+scripts/docker.sh run scripts/build_all.sh # 在和 CI 完全一样的容器里再跑一遍
+```
+
+完整说明见 [docs/dev-environment.md](docs/dev-environment.md)，包括 VS Code、Claude Code、Docker Hub 连不上时的处理办法，以及用 gdb、qemu、OpenOCD 和 usbipd 调试的方法。
 
 ## 构建
 
-所有模块都使用 CMake（≥ 3.21）。**各模块单独构建**，在模块目录下执行即可。
+以下命令在 WSL 或容器里执行。所有模块都使用 CMake（≥ 3.21），**各模块单独构建**。
 
 ### 主机构建（单元测试 / 开发调试）
-
-固件模块中与平台无关的 `core/` 部分可以直接在主机上编译和测试：
 
 ```bash
 cmake -S flight-controller -B build/fc-host
@@ -50,13 +70,7 @@ cmake --build build/fc-host
 ctest --test-dir build/fc-host --output-on-failure
 ```
 
-Linux 应用同理：
-
-```bash
-cmake -S perception -B build/perception-host
-cmake --build build/perception-host
-ctest --test-dir build/perception-host --output-on-failure
-```
+把 `flight-controller` 换成 `common`、`esc`、`simulator`、`perception` 或 `localization` 即可构建其他模块。
 
 ### 交叉编译固件（FreeRTOS）
 
@@ -71,7 +85,7 @@ git submodule update --init --recursive
 
 ```bash
 cmake -S flight-controller -B build/fc-fw \
-      -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/arm-none-eabi.cmake \
+      -DCMAKE_TOOLCHAIN_FILE=$PWD/cmake/toolchains/arm-none-eabi.cmake \
       -DFC_BOARD=stm32f4
 cmake --build build/fc-fw
 ```
@@ -80,34 +94,55 @@ cmake --build build/fc-fw
 
 ```bash
 cmake -S localization -B build/loc-arm64 \
-      -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/aarch64-linux-gnu.cmake
+      -DCMAKE_TOOLCHAIN_FILE=$PWD/cmake/toolchains/aarch64-linux-gnu.cmake
 cmake --build build/loc-arm64
 ```
 
-## 模块间通信
+## 仿真调试
 
-模块之间的接口定义集中放在 [common/protocol/](common/protocol/)，具体见 [docs/architecture.md](docs/architecture.md)。
+飞控按"能在模拟器里跑"来设计，可以从三个层次接入模拟器（详见 [simulator/README.md](simulator/README.md)）：
 
-- 飞控 ↔ 电调：DShot / CAN（待定）
-- 飞控 ↔ 机载计算机：UART，使用 `common/protocol` 中定义的二进制帧
-- 感知 ↔ 定位：同一台机器上的进程间通信（待定）
+| 层次 | 接入点 | 用途 |
+|------|--------|------|
+| 算法闭环 | `fc::FlightControl::update()`，纯函数 | 调算法和参数、CI 回归测试 |
+| SITL | `bsp/sim` 的 `SimBoard` + FreeRTOS POSIX port | 整套固件在电脑上运行 |
+| HITL | 真实飞控板 + 串口版 `SimBackend` | 上真机前的验证 |
+
+模拟器和飞控之间锁步运行，消息定义在 `common/protocol` 中（`UAV_MSG_SIM_SENSORS` / `UAV_MSG_SIM_ACTUATORS`）。
+
+## 代码格式化
+
+C/C++ 代码统一用 clang-format 格式化，风格配置来自 [devkits](https://github.com/stingliang/devkits)（[.clang-format](.clang-format)），**clang-format 版本固定为 20.1.8**。
+
+```bash
+scripts/format.sh             # 格式化全部 C/C++ 文件
+scripts/format.sh a.cpp b.h   # 只格式化指定文件
+scripts/format.sh --check     # 只检查不修改（CI 用）
+```
+
+- **clang-format 安装**：Docker 镜像里已经装好；在主机上用的话执行 `pip install clang-format==20.1.8`，Visual Studio 自带的版本也会被自动找到
+- **提交前检查**：每个 clone 执行一次 `git config core.hooksPath scripts/git-hooks`，之后提交未格式化的代码会被拒绝
+- **Claude Code**：[.claude/settings.json](.claude/settings.json) 里配了 hook，Claude 每次改完 C/C++ 文件都会自动格式化
+- **CI**：`format` job 会检查格式
+- 第三方代码（`third_party/`、`bsp/*/vendor/`）不做格式化；`FreeRTOSConfig.h` 里的配置表用 `clang-format off` 保留了列对齐
 
 ## 开发约定
 
-- **代码风格**：仓库根目录的 [.clang-format](.clang-format)，提交前执行 `clang-format -i`
+- **语言**：固件和应用都用 C++17；`common/protocol` 是 C 头文件
 - **换行符**：统一使用 LF（由 [.gitattributes](.gitattributes) 保证）
 - **分支**：`main` 保持可构建；功能开发在 `feat/<模块>-<描述>` 分支上进行
 - **提交信息**：`<模块>: <描述>`，例如 `fc: add attitude rate controller`
-- **固件代码**：`core/` 中禁止依赖 FreeRTOS 和硬件，保证能在主机上测试；只在初始化阶段分配内存，调度器启动后不再动态分配
+- **固件代码**：`core/` 中禁止依赖 FreeRTOS 和硬件；不用异常和 RTTI；调度器启动后不做堆分配
 
 ## 路线图
 
 - [ ] 通信协议 v1 定稿
 - [ ] 飞控：IMU 驱动 + 姿态解算 + 角速度环
-- [ ] 电调：六步换相 / FOC 电流环
+- [ ] 电调：FOC 电流环 + SVPWM
+- [ ] 仿真器：四旋翼动力学模型 + 进程内算法闭环
+- [ ] SITL：FreeRTOS POSIX port + UDP SimBackend
 - [ ] 定位：IMU + 视觉/GNSS 融合
 - [ ] 感知：相机采集 + 障碍物检测
-- [ ] SITL 软件在环仿真
 
 ## 许可证
 

@@ -3,19 +3,23 @@
 
 #include "perception/obstacle_detector.hpp"
 
-namespace {
+namespace
+{
 int failures = 0;
-#define CHECK(cond)                                                                    \
-    do {                                                                               \
-        if (!(cond)) {                                                                 \
+#define CHECK(cond)                                                                       \
+    do                                                                                    \
+    {                                                                                     \
+        if (!(cond))                                                                      \
+        {                                                                                 \
             std::fprintf(stderr, "%s:%d: CHECK failed: %s\n", __FILE__, __LINE__, #cond); \
-            ++failures;                                                                \
-        }                                                                              \
+            ++failures;                                                                   \
+        }                                                                                 \
     } while (0)
 
 using namespace uav::perception;
 
-DepthImage make_image(float fill) {
+DepthImage make_image(float fill)
+{
     DepthImage img;
     img.width = 8;
     img.height = 6;
@@ -23,7 +27,8 @@ DepthImage make_image(float fill) {
     return img;
 }
 
-void test_finds_nearest_in_roi() {
+void test_finds_nearest_in_roi()
+{
     DepthImage img = make_image(10.0f);
     img.depth_m[3 * img.width + 4] = 2.5f;  // inside centered ROI
     img.depth_m[0] = 0.5f;                  // corner: outside ROI, must be ignored
@@ -32,13 +37,15 @@ void test_finds_nearest_in_roi() {
     CHECK(obs && obs->distance_m == 2.5f && obs->x == 4 && obs->y == 3);
 }
 
-void test_ignores_invalid_returns() {
+void test_ignores_invalid_returns()
+{
     DepthImage img = make_image(std::numeric_limits<float>::quiet_NaN());
     img.depth_m[3 * img.width + 3] = 0.0f;
     CHECK(!ObstacleDetector{}.nearest(img).has_value());
 }
 
-void test_rejects_malformed_image() {
+void test_rejects_malformed_image()
+{
     DepthImage img;
     img.width = 4;
     img.height = 4;
@@ -47,11 +54,13 @@ void test_rejects_malformed_image() {
 }
 }  // namespace
 
-int main() {
+int main()
+{
     test_finds_nearest_in_roi();
     test_ignores_invalid_returns();
     test_rejects_malformed_image();
-    if (failures) {
+    if (failures)
+    {
         std::fprintf(stderr, "%d check(s) failed\n", failures);
         return 1;
     }

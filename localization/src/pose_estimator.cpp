@@ -1,16 +1,21 @@
 #include "localization/pose_estimator.hpp"
 
-namespace uav::localization {
+namespace uav::localization
+{
 
-PoseEstimator::PoseEstimator(const Config& config) : config_(config) {
-    for (auto& c : cov_) {
+PoseEstimator::PoseEstimator(const Config& config) : config_(config)
+{
+    for (auto& c : cov_)
+    {
         c = {config_.initial_pos_var, 0.0f, config_.initial_vel_var};
     }
 }
 
-void PoseEstimator::predict(const Vec3& accel, float dt) {
+void PoseEstimator::predict(const Vec3& accel, float dt)
+{
     const float q = config_.accel_noise_var;
-    for (std::size_t i = 0; i < 3; ++i) {
+    for (std::size_t i = 0; i < 3; ++i)
+    {
         pos_[i] += vel_[i] * dt + 0.5f * accel[i] * dt * dt;
         vel_[i] += accel[i] * dt;
 
@@ -26,8 +31,10 @@ void PoseEstimator::predict(const Vec3& accel, float dt) {
     }
 }
 
-void PoseEstimator::correct_position(const Vec3& z, float r) {
-    for (std::size_t i = 0; i < 3; ++i) {
+void PoseEstimator::correct_position(const Vec3& z, float r)
+{
+    for (std::size_t i = 0; i < 3; ++i)
+    {
         Cov& c = cov_[i];
         const float s = c.pp + r;
         const float k_p = c.pp / s;
@@ -45,14 +52,17 @@ void PoseEstimator::correct_position(const Vec3& z, float r) {
     }
 }
 
-Vec3 PoseEstimator::position_variance() const {
+Vec3 PoseEstimator::position_variance() const
+{
     return {cov_[0].pp, cov_[1].pp, cov_[2].pp};
 }
 
-uav_msg_pose_estimate_t PoseEstimator::to_message(uint64_t timestamp_us) const {
+uav_msg_pose_estimate_t PoseEstimator::to_message(uint64_t timestamp_us) const
+{
     uav_msg_pose_estimate_t msg{};
     msg.timestamp_us = timestamp_us;
-    for (std::size_t i = 0; i < 3; ++i) {
+    for (std::size_t i = 0; i < 3; ++i)
+    {
         msg.position_m[i] = pos_[i];
         msg.velocity_m_s[i] = vel_[i];
         msg.position_var[i] = cov_[i].pp;

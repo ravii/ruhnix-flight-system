@@ -2,21 +2,39 @@
 
 #include <string.h>
 
-uint16_t uav_crc16(const uint8_t *data, size_t len) {
-    uint16_t crc = 0xFFFFu;
-    for (size_t i = 0; i < len; ++i) {
-        crc = (uint16_t)(crc ^ ((uint16_t)data[i] << 8));
-        for (int b = 0; b < 8; ++b) {
-            crc = (uint16_t)((crc & 0x8000u) ? ((crc << 1) ^ 0x1021u) : (crc << 1));
+#include "uav/protocol/messages.h"
+
+/* Every message must fit in a single frame. */
+_Static_assert(sizeof(uav_msg_heartbeat_t) <= UAV_FRAME_MAX_PAYLOAD, "payload too large");
+_Static_assert(sizeof(uav_msg_imu_t) <= UAV_FRAME_MAX_PAYLOAD, "payload too large");
+_Static_assert(sizeof(uav_msg_attitude_t) <= UAV_FRAME_MAX_PAYLOAD, "payload too large");
+_Static_assert(sizeof(uav_msg_motor_cmd_t) <= UAV_FRAME_MAX_PAYLOAD, "payload too large");
+_Static_assert(sizeof(uav_msg_pose_estimate_t) <= UAV_FRAME_MAX_PAYLOAD, "payload too large");
+_Static_assert(sizeof(uav_msg_sim_sensors_t) <= UAV_FRAME_MAX_PAYLOAD, "payload too large");
+_Static_assert(sizeof(uav_msg_sim_actuators_t) <= UAV_FRAME_MAX_PAYLOAD, "payload too large");
+
+uint16_t uav_crc16(const uint8_t* data, size_t len)
+{
+    /* Work in uint32_t: uint16_t operands promote to (signed) int. */
+    uint32_t crc = 0xFFFFu;
+    for (size_t i = 0; i < len; ++i)
+    {
+        crc ^= (uint32_t)data[i] << 8;
+        for (int b = 0; b < 8; ++b)
+        {
+            crc = (crc & 0x8000u) ? ((crc << 1) ^ 0x1021u) : (crc << 1);
         }
+        crc &= 0xFFFFu;
     }
-    return crc;
+    return (uint16_t)crc;
 }
 
-size_t uav_frame_encode(uint8_t msg_id, uint8_t seq, const void *payload, uint16_t payload_len,
-                        uint8_t *out, size_t out_size) {
+size_t uav_frame_encode(uint8_t msg_id, uint8_t seq, const void* payload, uint16_t payload_len,
+    uint8_t* out, size_t out_size)
+{
     const size_t total = (size_t)UAV_FRAME_OVERHEAD + payload_len;
-    if (payload_len > UAV_FRAME_MAX_PAYLOAD || out_size < total) {
+    if (payload_len > UAV_FRAME_MAX_PAYLOAD || out_size < total)
+    {
         return 0;
     }
     out[0] = UAV_FRAME_SYNC0;
@@ -25,7 +43,8 @@ size_t uav_frame_encode(uint8_t msg_id, uint8_t seq, const void *payload, uint16
     out[3] = seq;
     out[4] = (uint8_t)(payload_len & 0xFFu);
     out[5] = (uint8_t)(payload_len >> 8);
-    if (payload_len > 0) {
+    if (payload_len > 0)
+    {
         memcpy(&out[UAV_FRAME_HEADER_SIZE], payload, payload_len);
     }
     const uint16_t crc = uav_crc16(&out[2], (size_t)4 + payload_len);
@@ -34,22 +53,30 @@ size_t uav_frame_encode(uint8_t msg_id, uint8_t seq, const void *payload, uint16
     return total;
 }
 
-void uav_frame_parser_init(uav_frame_parser_t *p) {
+void uav_frame_parser_init(uav_frame_parser_t* p)
+{
     memset(p, 0, sizeof(*p));
 }
 
-int uav_frame_parser_feed(uav_frame_parser_t *p, uint8_t byte, uav_frame_t *out) {
+int uav_frame_parser_feed(uav_frame_parser_t* p, uint8_t byte, uav_frame_t* out)
+{
     /* Hunt for sync bytes. */
-    if (p->pos == 0) {
-        if (byte == UAV_FRAME_SYNC0) {
+    if (p->pos == 0)
+    {
+        if (byte == UAV_FRAME_SYNC0)
+        {
             p->buf[p->pos++] = byte;
         }
         return 0;
     }
-    if (p->pos == 1) {
-        if (byte == UAV_FRAME_SYNC1) {
+    if (p->pos == 1)
+    {
+        if (byte == UAV_FRAME_SYNC1)
+        {
             p->buf[p->pos++] = byte;
-        } else {
+        }
+        else
+        {
             p->pos = (byte == UAV_FRAME_SYNC0) ? 1u : 0u;
         }
         return 0;
@@ -57,23 +84,27 @@ int uav_frame_parser_feed(uav_frame_parser_t *p, uint8_t byte, uav_frame_t *out)
 
     p->buf[p->pos++] = byte;
 
-    if (p->pos < UAV_FRAME_HEADER_SIZE) {
+    if (p->pos < UAV_FRAME_HEADER_SIZE)
+    {
         return 0;
     }
     const uint16_t len = (uint16_t)(p->buf[4] | (p->buf[5] << 8));
-    if (len > UAV_FRAME_MAX_PAYLOAD) {
+    if (len > UAV_FRAME_MAX_PAYLOAD)
+    {
         p->pos = 0; /* Corrupt length; resynchronize. */
         return 0;
     }
-    if (p->pos < (size_t)UAV_FRAME_OVERHEAD + len) {
+    if (p->pos < (size_t)UAV_FRAME_OVERHEAD + len)
+    {
         return 0;
     }
 
-    const uint16_t rx_crc =
-        (uint16_t)(p->buf[UAV_FRAME_HEADER_SIZE + len] | (p->buf[UAV_FRAME_HEADER_SIZE + len + 1] << 8));
+    const uint16_t rx_crc = (uint16_t)(p->buf[UAV_FRAME_HEADER_SIZE + len] |
+                                       (p->buf[UAV_FRAME_HEADER_SIZE + len + 1] << 8));
     const uint16_t calc_crc = uav_crc16(&p->buf[2], (size_t)4 + len);
     p->pos = 0;
-    if (rx_crc != calc_crc) {
+    if (rx_crc != calc_crc)
+    {
         p->crc_errors++;
         return 0;
     }

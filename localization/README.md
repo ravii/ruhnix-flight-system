@@ -18,7 +18,7 @@ ctest --test-dir build/loc-host --output-on-failure
 
 # 交叉编译到 ARM64
 cmake -S localization -B build/loc-arm64 \
-      -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/aarch64-linux-gnu.cmake \
+      -DCMAKE_TOOLCHAIN_FILE=$PWD/cmake/toolchains/aarch64-linux-gnu.cmake \
       -DCMAKE_SYSROOT=/path/to/sysroot
 cmake --build build/loc-arm64
 ```

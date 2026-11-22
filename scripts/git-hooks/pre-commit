@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Rejects commits containing C/C++ files that are not clang-formatted.
+# Enable once per clone:  git config core.hooksPath scripts/git-hooks
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+mapfile -t staged < <(git diff --cached --name-only --diff-filter=ACMR |
+    grep -E '\.(c|h|cc|cpp|cxx|hh|hpp|hxx)$' | grep -vE '^third_party/' || true)
+
+if [[ ${#staged[@]} -eq 0 ]]; then
+    exit 0
+fi
+
+if ! "$REPO_ROOT/scripts/format.sh" --check "${staged[@]}"; then
+    echo >&2
+    echo "Commit aborted. Format with: scripts/format.sh ${staged[*]}" >&2
+    echo "then 'git add' the files again." >&2
+    exit 1
+fi

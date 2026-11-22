@@ -1,0 +1,41 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 21,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "fc-host",
+            "displayName": "Flight Controller - Host Tests",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/../build/fc-host",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "BUILD_TESTING": "ON"
+            }
+        },
+        {
+            "name": "fc-firmware",
+            "displayName": "Flight Controller - ARM Firmware",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/../build/fc-fw",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/../cmake/toolchains/arm-none-eabi.cmake",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "FC_BOARD": "stm32f4"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "fc-host",
+            "configurePreset": "fc-host"
+        },
+        {
+            "name": "fc-firmware",
+            "configurePreset": "fc-firmware"
+        }
+    ]
+}

@@ -5,16 +5,19 @@
 
 #include "uav/protocol/messages.h"
 
-namespace uav::localization {
+namespace uav::localization
+{
 
 using Vec3 = std::array<float, 3>;
 
 // Per-axis constant-acceleration Kalman filter on [position, velocity] in world NED.
 // Predict with world-frame acceleration (e.g. rotated IMU minus gravity);
 // correct with absolute position fixes (GNSS, visual odometry, motion capture).
-class PoseEstimator {
+class PoseEstimator
+{
 public:
-    struct Config {
+    struct Config
+    {
         float accel_noise_var = 0.5f;  // (m/s^2)^2
         float initial_pos_var = 100.0f;
         float initial_vel_var = 10.0f;
@@ -33,7 +36,8 @@ public:
     uav_msg_pose_estimate_t to_message(uint64_t timestamp_us) const;
 
 private:
-    struct Cov {
+    struct Cov
+    {
         float pp, pv, vv;  // symmetric 2x2 covariance
     };
 

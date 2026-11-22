@@ -35,10 +35,37 @@
 | 飞控 ↔ 机载计算机 | UART（≥ 921600 bps） | `common/protocol` 帧 | [frame.h](../common/protocol/include/uav/protocol/frame.h) |
 | 飞控 → 电调 | DShot 或 CAN | 待定 | — |
 | 感知 ↔ 定位 | 同机进程间通信 | 待定（共享内存 / Unix socket） | — |
+| 模拟器 ↔ 飞控 | 进程内 / UDP / UART | `UAV_MSG_SIM_SENSORS`、`UAV_MSG_SIM_ACTUATORS`，锁步 | [messages.h](../common/protocol/include/uav/protocol/messages.h) |
+
+## 仿真
+
+飞控软件分三层，每一层都能单独接到模拟器上：
+
+```
+                          真机                         仿真
+ ┌──────────────┐
+ │ core/        │  FlightControl::update()   ◀── 算法闭环：模拟器在进程内直接调用
+ │ (纯函数)     │
+ ├──────────────┤
+ │ app/         │  ControlTask 阻塞在 wait_imu()
+ │ (FreeRTOS)   │
+ ├──────────────┤
+ │ fc::Board    │  bsp/<board>（SPI、定时器）  │  bsp/sim：SimBoard ◀── SITL（UDP）/ HITL（串口）
+ └──────────────┘
+```
+
+关键约定：
+
+- **控制环由数据驱动，不由定时器驱动**：控制任务等待 IMU 数据。模拟器每发一帧传感器数据，飞控就走一步并回复电机输出，模拟器收到回复后才推进物理模型。这就是锁步，不需要改 FreeRTOS 的 tick。
+- **时间只来自 `Board::time_us()`**：仿真时它就是仿真时间，所以每次运行的结果都一样。
+- **SITL 和 HITL 共用同一套消息**：模拟器这边只需要换 `FcLink` 的实现。
+
+详见 [simulator/README.md](../simulator/README.md)。
 
 ## 设计原则
 
 1. **模块独立构建**：每个模块都有自己的 `CMakeLists.txt`，可以单独构建、测试和发布
 2. **接口集中定义**：跨模块的数据结构只在 `common/` 中定义一份
-3. **算法与平台分离**：固件中的 `core/` 不依赖 RTOS 和硬件，能在主机上测试，以后也能复用到 SITL 中
-4. **实时路径无动态分配**：固件只在初始化阶段分配内存，Linux 应用的实时循环中避免分配
+3. **算法与平台分离**：固件中的 `core/` 不依赖 RTOS 和硬件，能在主机上测试，也能直接接到模拟器上
+4. **硬件只通过接口访问**：`fc::Board` / `esc::Board`，真机和仿真各实现一份
+5. **实时路径无动态分配**：固件只在初始化阶段分配内存，Linux 应用的实时循环中避免分配

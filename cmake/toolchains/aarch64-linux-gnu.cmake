@@ -1,6 +1,6 @@
 # Toolchain for ARM64 embedded Linux companion computers (perception, localization).
 #
-# Usage: -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/aarch64-linux-gnu.cmake
+# Usage: -DCMAKE_TOOLCHAIN_FILE=$PWD/cmake/toolchains/aarch64-linux-gnu.cmake
 # Optional: -DCMAKE_SYSROOT=/path/to/target/sysroot
 
 set(CMAKE_SYSTEM_NAME Linux)

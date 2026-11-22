@@ -4,10 +4,12 @@
 #include <optional>
 #include <vector>
 
-namespace uav::perception {
+namespace uav::perception
+{
 
 // Row-major depth image in meters. Non-finite or <= 0 values mean "no return".
-struct DepthImage {
+struct DepthImage
+{
     std::size_t width = 0;
     std::size_t height = 0;
     std::vector<float> depth_m;
@@ -15,7 +17,8 @@ struct DepthImage {
     float at(std::size_t x, std::size_t y) const { return depth_m[y * width + x]; }
 };
 
-struct Obstacle {
+struct Obstacle
+{
     float distance_m;
     std::size_t x;
     std::size_t y;
@@ -23,9 +26,11 @@ struct Obstacle {
 
 // Finds the closest valid depth return inside a centered region of interest.
 // Baseline detector; to be replaced by a proper point-cloud / learned pipeline.
-class ObstacleDetector {
+class ObstacleDetector
+{
 public:
-    struct Config {
+    struct Config
+    {
         float roi_fraction = 0.5f;  // ROI size relative to the image, per axis
         float min_range_m = 0.2f;
         float max_range_m = 20.0f;

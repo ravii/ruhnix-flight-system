@@ -27,31 +27,33 @@ extern "C" {
 #define UAV_FRAME_OVERHEAD (UAV_FRAME_HEADER_SIZE + UAV_FRAME_CRC_SIZE)
 #define UAV_FRAME_MAX_SIZE (UAV_FRAME_OVERHEAD + UAV_FRAME_MAX_PAYLOAD)
 
-uint16_t uav_crc16(const uint8_t *data, size_t len);
+uint16_t uav_crc16(const uint8_t* data, size_t len);
 
 /* Encodes one frame into `out`. Returns the number of bytes written,
  * or 0 if the payload is too large or `out_size` is insufficient. */
-size_t uav_frame_encode(uint8_t msg_id, uint8_t seq, const void *payload, uint16_t payload_len,
-                        uint8_t *out, size_t out_size);
+size_t uav_frame_encode(uint8_t msg_id, uint8_t seq, const void* payload, uint16_t payload_len,
+    uint8_t* out, size_t out_size);
 
-typedef struct {
+typedef struct
+{
     uint8_t msg_id;
     uint8_t seq;
     uint16_t len;
     uint8_t payload[UAV_FRAME_MAX_PAYLOAD];
 } uav_frame_t;
 
-typedef struct {
+typedef struct
+{
     uint8_t buf[UAV_FRAME_MAX_SIZE];
     size_t pos;
     uint32_t crc_errors;
 } uav_frame_parser_t;
 
-void uav_frame_parser_init(uav_frame_parser_t *p);
+void uav_frame_parser_init(uav_frame_parser_t* p);
 
 /* Feeds one byte. Returns 1 and fills `out` when a complete, valid frame
  * has been received; returns 0 otherwise. */
-int uav_frame_parser_feed(uav_frame_parser_t *p, uint8_t byte, uav_frame_t *out);
+int uav_frame_parser_feed(uav_frame_parser_t* p, uint8_t byte, uav_frame_t* out);
 
 #ifdef __cplusplus
 }

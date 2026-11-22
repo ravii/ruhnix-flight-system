@@ -1,0 +1,37 @@
+{
+  "name": "uav-flight (Ubuntu 26.04)",
+  "build": {
+    "dockerfile": "../docker/Dockerfile",
+    "context": "../docker",
+    "args": {
+      // Official Ubuntu image via AWS ECR Public: same content as Docker Hub's
+      // ubuntu:26.04, but reachable where Docker Hub is blocked or rate-limited.
+      "BASE_IMAGE": "public.ecr.aws/docker/library/ubuntu:26.04"
+    }
+  },
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "remoteUser": "dev",
+  "updateRemoteUserUID": true,
+  "runArgs": [
+    "--cap-add=SYS_PTRACE",
+    "--security-opt",
+    "seccomp=unconfined",
+    "--add-host=host.docker.internal:host-gateway"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cmake-tools",
+        "ms-vscode.cpptools",
+        "xaver.clang-format"
+      ],
+      "settings": {
+        "clang-format.executable": "/opt/venv/bin/clang-format",
+        "C_Cpp.clang_format_path": "/opt/venv/bin/clang-format",
+        "[c]": { "editor.formatOnSave": true },
+        "[cpp]": { "editor.formatOnSave": true }
+      }
+    }
+  }
+}
