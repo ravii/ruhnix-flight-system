@@ -11,12 +11,13 @@ namespace rfs::sim
 /**
  * One lockstep exchange: deliver a sensor packet, wait for the actuator reply.
  *
- * Implementations (to be added), from fastest to most realistic:
+ * Implementations, from fastest to most realistic:
  *   InProcessLink  calls rfs::fc::FlightControl::update() directly (no RTOS).
  *                  For algorithm development, tuning and CI regression runs.
- *   UdpLink        SITL: full firmware on the host (FreeRTOS POSIX port +
+ *                  See in_process_link.hpp.
+ *   UdpLink        SITL (udp_link.hpp): full firmware on the host (FreeRTOS POSIX port +
  *                  flight-controller/bsp/sim with a UDP SimBackend).
- *   SerialLink     HITL: real flight-controller board over UART.
+ *   SerialLink     (to be added) HITL: real flight-controller board over UART.
  */
 class FcLink
 {

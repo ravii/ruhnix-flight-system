@@ -11,6 +11,7 @@ namespace rfs::fc
 void TelemetryTask::run()
 {
     constexpr TickType_t kPeriod = pdMS_TO_TICKS(100);
+    static_assert(kPeriod * 1000u == 100u * configTICK_RATE_HZ, "period is not a whole tick count");
     std::array<uint8_t, common::kFrameMaxSize> wire{};
 
     for (;;)

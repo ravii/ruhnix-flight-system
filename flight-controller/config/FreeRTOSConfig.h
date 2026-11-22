@@ -9,22 +9,36 @@
 
 #include <stdint.h>
 
+/*
+ * Two targets share this file:
+ *   - MCU boards (Cortex-M ports): the default.
+ *   - SITL (bsp/sitl, FreeRTOS POSIX port): RFS_FC_SITL is defined by
+ *     bsp/sitl/board.cmake. Each task is a pthread; see bsp/sitl/sitl_board.cpp.
+ */
+
 /* Included from both the C kernel and C++ application code. */
 #ifdef __cplusplus
 extern "C" {
 #endif
+#ifndef RFS_FC_SITL
 extern uint32_t SystemCoreClock; /* provided by the board's system.c */
+#endif
 void fc_assert_failed(const char* file, int line);
 #ifdef __cplusplus
 }
 #endif
 
 /* Scheduler */
+/*
+ * Tick: 50 Hz (20 ms). The control loop does not use the tick: it is paced by
+ * Board::wait_imu() (IMU interrupt / lockstep packet). The tick only drives
+ * vTaskDelay(), software timers, block timeouts and time slicing, all with
+ * 20 ms resolution. pdMS_TO_TICKS() rounds down (pdMS_TO_TICKS(10) == 0):
+ * convert timeouts with rfs::fc::timeout_ticks() (rfs/fc/bsp/rtos_time.hpp).
+ */
 #define configUSE_PREEMPTION 1
-#define configUSE_PORT_OPTIMISED_TASK_SELECTION 1
 #define configUSE_TICKLESS_IDLE 0
-#define configCPU_CLOCK_HZ (SystemCoreClock)
-#define configTICK_RATE_HZ ((TickType_t)1000)
+#define configTICK_RATE_HZ ((TickType_t)50)
 #define configMAX_PRIORITIES 8
 #define configMINIMAL_STACK_SIZE ((uint16_t)128)
 #define configMAX_TASK_NAME_LEN 16
@@ -49,7 +63,11 @@ void fc_assert_failed(const char* file, int line);
 #define configTIMER_TASK_STACK_DEPTH 256
 
 /* Hooks and debugging */
+#ifdef RFS_FC_SITL
+#define configUSE_IDLE_HOOK 1 /* SITL: the idle task waits for UDP packets */
+#else
 #define configUSE_IDLE_HOOK 0
+#endif
 #define configUSE_TICK_HOOK 0
 #define configUSE_MALLOC_FAILED_HOOK 1
 #define configCHECK_FOR_STACK_OVERFLOW 2
@@ -65,6 +83,16 @@ void fc_assert_failed(const char* file, int line);
         }                                         \
     } while (0)
 
+#ifdef RFS_FC_SITL
+
+/* POSIX port: no optimised task selection, no CPU clock, no NVIC. */
+#define configUSE_PORT_OPTIMISED_TASK_SELECTION 0
+
+#else
+
+#define configUSE_PORT_OPTIMISED_TASK_SELECTION 1
+#define configCPU_CLOCK_HZ (SystemCoreClock)
+
 /* Cortex-M interrupt priorities (STM32: 4 priority bits). */
 #define configPRIO_BITS 4
 #define configLIBRARY_LOWEST_INTERRUPT_PRIORITY 15
@@ -73,6 +101,13 @@ void fc_assert_failed(const char* file, int line);
     (configLIBRARY_LOWEST_INTERRUPT_PRIORITY << (8 - configPRIO_BITS))
 #define configMAX_SYSCALL_INTERRUPT_PRIORITY \
     (configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY << (8 - configPRIO_BITS))
+
+/* Map FreeRTOS port handlers onto CMSIS vector names. */
+#define vPortSVCHandler SVC_Handler
+#define xPortPendSVHandler PendSV_Handler
+#define xPortSysTickHandler SysTick_Handler
+
+#endif /* RFS_FC_SITL */
 
 /* Optional API */
 #define INCLUDE_vTaskPrioritySet 1
@@ -83,11 +118,6 @@ void fc_assert_failed(const char* file, int line);
 #define INCLUDE_vTaskDelay 1
 #define INCLUDE_xTaskGetSchedulerState 1
 #define INCLUDE_uxTaskGetStackHighWaterMark 1
-
-/* Map FreeRTOS port handlers onto CMSIS vector names. */
-#define vPortSVCHandler SVC_Handler
-#define xPortPendSVHandler PendSV_Handler
-#define xPortSysTickHandler SysTick_Handler
 
 /* clang-format on */
 

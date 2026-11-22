@@ -10,21 +10,38 @@
             "name": "fc-host",
             "displayName": "Flight Controller - Host Tests",
             "generator": "Ninja",
-            "binaryDir": "${sourceDir}/../build/fc-host",
+            "binaryDir": "${sourceDir}/../build/host/flight-controller",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "RFS_WARNINGS_AS_ERRORS": "ON",
+                "FC_BOARD": "",
                 "BUILD_TESTING": "ON"
+            }
+        },
+        {
+            "name": "fc-sitl",
+            "displayName": "Flight Controller - SITL (FreeRTOS POSIX port)",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/../build/sitl/flight-controller",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "RFS_WARNINGS_AS_ERRORS": "ON",
+                "FC_BOARD": "sitl"
             }
         },
         {
             "name": "fc-firmware",
             "displayName": "Flight Controller - ARM Firmware",
             "generator": "Ninja",
-            "binaryDir": "${sourceDir}/../build/fc-fw",
+            "binaryDir": "${sourceDir}/../build/fw-stm32f4/flight-controller",
             "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
                 "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/../cmake/toolchains/arm-none-eabi.cmake",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-                "FC_BOARD": "stm32f4"
+                "FC_BOARD": "stm32f4",
+                "RFS_WARNINGS_AS_ERRORS": "ON"
             }
         }
     ],
@@ -32,6 +49,10 @@
         {
             "name": "fc-host",
             "configurePreset": "fc-host"
+        },
+        {
+            "name": "fc-sitl",
+            "configurePreset": "fc-sitl"
         },
         {
             "name": "fc-firmware",

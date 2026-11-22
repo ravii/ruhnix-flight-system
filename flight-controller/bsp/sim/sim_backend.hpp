@@ -1,9 +1,10 @@
 /**
  * Transport between SimBoard and a simulator.
  *
- * Implementations (to be added):
+ * Implementations:
  *   - UdpSimBackend     SITL: firmware on the host, simulator in another process
- *   - SerialSimBackend  HITL: firmware on the real board, simulator on the PC
+ *                       (bsp/sitl/udp_sim_backend.hpp)
+ *   - SerialSimBackend  HITL: firmware on the real board, simulator on the PC (to be added)
  * Both carry rfs::common::SimSensorsMsg / rfs::common::SimActuatorsMsg from
  * common/protocol, so the simulator side is the same for SITL and HITL.
  */
@@ -19,6 +20,9 @@ namespace rfs::fc
 class SimBackend
 {
 public:
+    /** Opens the transport. Called from Board::init(), before the scheduler starts. */
+    virtual void init() {}
+
     /** Blocks until the simulator sends the next step. false on timeout. */
     virtual bool receive_sensors(common::SimSensorsMsg& out, uint32_t timeout_ms) = 0;
 

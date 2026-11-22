@@ -28,17 +28,7 @@ endif()
 rfs_use_common()
 
 # ---- core: platform-independent algorithms (host-testable) ----------------
-add_library(fc_core STATIC
-    core/src/esc/dshot.cpp
-    core/src/esc/esc_output.cpp
-    core/src/flight_control.cpp
-    core/src/mixer.cpp
-    core/src/pid.cpp)
-target_include_directories(fc_core PUBLIC
-    core/include
-    bsp/include)    # rfs::fc::Board interface; header-only, no hardware dependency
-target_link_libraries(fc_core PUBLIC rfs::common)
-rfs_set_warnings(fc_core)
+add_subdirectory(core)
 
 # ---- simulator board: rfs::fc::Board backed by a simulator --------------------
 add_library(fc_bsp_sim STATIC

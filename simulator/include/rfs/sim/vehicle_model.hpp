@@ -21,8 +21,9 @@ struct VehicleState
 };
 
 /**
- * Implementations (to be added): a built-in quadrotor model (rigid body +
- * first-order motors + drag), or a bridge to an external engine (Gazebo ...).
+ * Implementations: QuadrotorModel (quadrotor_model.hpp: rigid body +
+ * first-order motors + drag + ground); later possibly a bridge to an external
+ * engine (Gazebo ...).
  */
 class VehicleModel
 {

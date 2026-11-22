@@ -14,6 +14,14 @@ function(rfs_use_common)
     endif()
 endfunction()
 
+# Pull in the flight-controller algorithms (target: rfs::fc_core) without the
+# rest of the firmware. Used by the simulator's in-process algorithm loop.
+function(rfs_use_fc_core)
+    if(NOT TARGET fc_core)
+        add_subdirectory(${RFS_ROOT}/flight-controller/core ${CMAKE_BINARY_DIR}/_rfs_fc_core)
+    endif()
+endfunction()
+
 # Strict warnings for project-owned targets (not third-party code).
 function(rfs_set_warnings target)
     if(MSVC)

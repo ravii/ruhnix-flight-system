@@ -8,6 +8,7 @@
 #include "esc_config.hpp"
 #include "rfs/fc/bsp/board.hpp"
 #include "rfs/fc/bsp/esc_bus.hpp"
+#include "rfs/fc/bsp/rtos_time.hpp"
 #include "rfs/fc/esc/esc_output.hpp"
 
 namespace
@@ -64,7 +65,7 @@ public:
     bool wait_imu(rfs::fc::ImuSample& out, uint32_t timeout_ms) override
     {
         imu_task_ = xTaskGetCurrentTaskHandle();
-        if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout_ms)) == 0)
+        if (ulTaskNotifyTake(pdTRUE, rfs::fc::timeout_ticks(timeout_ms)) == 0)
         {
             return false;
         }

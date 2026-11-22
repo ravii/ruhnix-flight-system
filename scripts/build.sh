@@ -8,6 +8,8 @@
 #   scripts/build.sh -t                             host build, then run the unit tests
 #   scripts/build.sh --arm64 -t                     perception + localization for ARM64 (tests under qemu)
 #   scripts/build.sh --fw stm32f4                   flight-controller firmware for bsp/stm32f4
+#   scripts/build.sh --sitl                         flight-controller firmware as a Linux process (SITL)
+#   scripts/build.sh --host --sitl -t               host build + SITL, then tests + SITL lockstep check
 #   scripts/build.sh --host --arm64                 several targets in one run
 #
 # Options:
@@ -15,12 +17,15 @@
 #   --arm64         aarch64-linux-gnu cross build: perception, localization
 #   --fw BOARD      arm-none-eabi firmware build: flight-controller for bsp/BOARD
 #                   (needs the FreeRTOS-Kernel submodule)
-#   -t, --test      run ctest after building (host, arm64; firmware has no tests)
+#   --sitl          host-compiler firmware build: flight-controller for bsp/sitl
+#                   (FreeRTOS POSIX port). With -t: runs scripts/sitl.sh --check,
+#                   which needs the host simulator build (add --host)
+#   -t, --test      run ctest after building (host, arm64; MCU firmware has no tests)
 #   -r, --release   CMAKE_BUILD_TYPE=Release (default: Debug)
 #   -c, --clean     delete the selected build directories before configuring
 #   -h, --help      show this help
 #
-# Build directories: $BUILD_ROOT/<target>/<module>, target = host | arm64 | fw-<BOARD>.
+# Build directories: $BUILD_ROOT/<target>/<module>, target = host | arm64 | sitl | fw-<BOARD>.
 # Every build uses -Werror (RFS_WARNINGS_AS_ERRORS), the same as CI.
 #
 # Environment:
@@ -62,6 +67,7 @@ contains() {
 # ---- arguments -------------------------------------------------------------
 want_host=0
 want_arm64=0
+want_sitl=0
 boards=()
 modules=()
 run_tests=0
@@ -70,6 +76,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
     --host) want_host=1 ;;
     --arm64) want_arm64=1 ;;
+    --sitl) want_sitl=1 ;;
     --fw)
         [[ $# -ge 2 && "$2" != -* ]] || die "--fw needs a board name (a directory under flight-controller/bsp/)"
         boards+=("$2")
@@ -91,7 +98,7 @@ while [[ $# -gt 0 ]]; do
     esac
     shift
 done
-if [[ $want_arm64 -eq 0 && ${#boards[@]} -eq 0 ]]; then
+if [[ $want_arm64 -eq 0 && $want_sitl -eq 0 && ${#boards[@]} -eq 0 ]]; then
     want_host=1
 fi
 
@@ -120,8 +127,12 @@ if [[ $want_arm64 -eq 1 ]]; then
     need_tool aarch64-linux-gnu-g++
     plan arm64 "${ARM64_MODULES[@]}"
 fi
+if [[ $want_sitl -eq 1 ]]; then
+    plan sitl "${FW_MODULES[@]}"
+fi
 for board in "${boards[@]}"; do
     [[ "$board" != _template ]] || die "bsp/_template is a template, not a board: copy it to bsp/<board> first"
+    [[ "$board" != sitl ]] || die "bsp/sitl is built with the host compiler: use --sitl, not --fw sitl"
     if [[ ! -f "$REPO_ROOT/flight-controller/bsp/$board/board.cmake" ]]; then
         available="$(find "$REPO_ROOT/flight-controller/bsp" -mindepth 2 -maxdepth 2 -name board.cmake \
             -not -path '*/_template/*' -printf '%h\n' | xargs -rn1 basename | tr '\n' ' ')"
@@ -134,7 +145,7 @@ done
 
 for m in "${modules[@]}"; do
     contains "$m" "${job_modules[@]}" || die "module '$m' is not built by the selected target(s)" \
-        "(arm64: ${ARM64_MODULES[*]}; --fw: ${FW_MODULES[*]})"
+        "(arm64: ${ARM64_MODULES[*]}; --sitl, --fw: ${FW_MODULES[*]})"
 done
 
 # ---- build -----------------------------------------------------------------
@@ -175,6 +186,9 @@ build_one() {
     arm64)
         args+=(-DCMAKE_TOOLCHAIN_FILE="$REPO_ROOT/cmake/toolchains/aarch64-linux-gnu.cmake" "${emulator[@]}")
         ;;
+    sitl)
+        args+=(-DFC_BOARD=sitl)  # host compiler, FreeRTOS POSIX port
+        ;;
     fw-*)
         args+=(-DCMAKE_TOOLCHAIN_FILE="$REPO_ROOT/cmake/toolchains/arm-none-eabi.cmake"
             -DFC_BOARD="${target#fw-}")
@@ -185,7 +199,7 @@ build_one() {
         rm -rf "$dir"
     fi
     cmake "${args[@]}" || return 1
-    if [[ "$target" == host ]]; then
+    if [[ "$target" == host || "$target" == sitl ]]; then
         check_host_cache "$dir" || return 1
     fi
     cmake --build "$dir" --parallel || return 1
@@ -193,6 +207,7 @@ build_one() {
     if [[ $run_tests -eq 1 ]]; then
         case "$target" in
         host) ctest --test-dir "$dir" --output-on-failure || return 1 ;;
+        sitl) "$REPO_ROOT/scripts/sitl.sh" --no-build --check || return 1 ;;
         arm64)
             if [[ ${#emulator[@]} -gt 0 ]]; then
                 ctest --test-dir "$dir" --output-on-failure || return 1

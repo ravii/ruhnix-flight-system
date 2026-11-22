@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true  # third_party/FreeRTOS-Kernel, for the SITL build
 
       - name: Build dev image
         run: bash scripts/docker.sh build
@@ -20,18 +22,14 @@ jobs:
       - name: Check formatting
         run: bash scripts/docker.sh run bash scripts/format.sh --check
 
-      - name: Build and test all modules
+      - name: Build and test all modules, SITL lockstep check
         run: bash scripts/docker.sh run bash scripts/build_all.sh
 
-  # Enable once FreeRTOS-Kernel is added as a submodule and a board exists in bsp/.
+  # Enable once a real board exists in bsp/.
   # firmware:
   #   runs-on: ubuntu-latest
   #   steps:
   #     - uses: actions/checkout@v4
   #       with: { submodules: recursive }
   #     - run: bash scripts/docker.sh build
-  #     - run: >
-  #         bash scripts/docker.sh run
-  #         cmake -S flight-controller -B build/fc-fw -G Ninja
-  #         -DCMAKE_TOOLCHAIN_FILE=/workspace/cmake/toolchains/arm-none-eabi.cmake -DFC_BOARD=stm32f4
-  #         '&&' cmake --build build/fc-fw
+  #     - run: bash scripts/docker.sh run bash scripts/build.sh --fw stm32f4

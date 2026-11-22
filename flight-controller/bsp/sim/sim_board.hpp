@@ -19,7 +19,7 @@ class SimBoard final : public Board
 public:
     explicit SimBoard(SimBackend& backend) : backend_(backend) {}
 
-    void init() override {}
+    void init() override { backend_.init(); }
     uint64_t time_us() override { return packet_.time_us; }
     bool wait_imu(ImuSample& out, uint32_t timeout_ms) override;
     bool read_baro(BaroSample& out) override;
