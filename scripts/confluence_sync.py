@@ -41,7 +41,7 @@ import xml.etree.ElementTree as ET
 import markdown
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
-REPO_URL = 'https://github.com/stingliang/uav-flight'
+REPO_URL = 'https://github.com/ravii/uav-flight'
 
 # Parent page for everything below: https://<site>/wiki/x/<ROOT_TINY_LINK>
 # (the space home page "My first space" of space MFS).

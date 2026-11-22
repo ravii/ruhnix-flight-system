@@ -45,7 +45,7 @@ uav-flight/
 
 ```bash
 # WSL 里，第一次
-git clone https://github.com/stingliang/uav-flight.git ~/uav-flight && cd ~/uav-flight
+git clone https://github.com/ravii/uav-flight.git ~/uav-flight && cd ~/uav-flight
 sudo bash docker/setup_ubuntu.sh
 git config core.hooksPath scripts/git-hooks
 
@@ -110,7 +110,7 @@ cmake --build build/loc-arm64
 
 ## 代码格式化
 
-C/C++ 代码统一用 clang-format 格式化，风格配置来自 [devkits](https://github.com/stingliang/devkits)（[.clang-format](.clang-format)），**clang-format 版本固定为 20.1.8**。
+C/C++ 代码统一用 clang-format 格式化，风格配置来自 [devkits](https://github.com/ravii/devkits)（[.clang-format](.clang-format)），**clang-format 版本固定为 20.1.8**。
 
 ```bash
 scripts/format.sh             # 格式化全部 C/C++ 文件

@@ -23,7 +23,7 @@ wsl --install -d Ubuntu-26.04
 
 ```bash
 # WSL 里：仓库要放在 WSL 自己的文件系统里（不要放在 /mnt/c、/mnt/d 下，那里读写很慢）
-git clone https://github.com/stingliang/uav-flight.git ~/uav-flight
+git clone https://github.com/ravii/uav-flight.git ~/uav-flight
 cd ~/uav-flight
 sudo bash docker/setup_ubuntu.sh            # 安装工具链
 git config core.hooksPath scripts/git-hooks # 提交前检查格式
